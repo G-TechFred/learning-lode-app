@@ -43,9 +43,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ScholarPulse — Automated Student Performance Tracker" },
+      { title: "G-TECH AUTOMATION — Automated Student Performance Tracker" },
       { name: "description", content: "Modern dashboard for teachers, students and parents to track grades, attendance and progress in real time." },
-      { property: "og:title", content: "ScholarPulse — Student Performance Tracker" },
+      { property: "og:title", content: "G-TECH AUTOMATION — Student Performance Tracker" },
       { property: "og:description", content: "Real-time analytics for teachers, students and parents." },
     ],
   }),
@@ -123,7 +123,7 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             <span className="bg-gradient-to-r from-white via-indigo-200 to-emerald-200 bg-clip-text text-transparent">
-              ScholarPulse
+              G-TECH AUTOMATION
             </span>
           </h1>
           <p className="mt-4 text-base text-slate-300 sm:text-lg">
@@ -164,7 +164,7 @@ function NavBar({ role, setRole }: { role: Role; setRole: (r: Role | null) => vo
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight">ScholarPulse</p>
+            <p className="truncate text-sm font-bold tracking-tight">G-TECH AUTOMATION</p>
             <p className="hidden text-xs text-slate-500 sm:block">Performance tracker</p>
           </div>
         </div>
