@@ -15,7 +15,6 @@ import {
   Award,
   LogIn,
   ChevronRight,
-  X,
   Bell,
 } from "lucide-react";
 import {
