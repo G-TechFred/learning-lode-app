@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import splashBg from "@/assets/splash-bg.jpg";
 import {
   Users,
   TrendingUp,
@@ -94,7 +95,9 @@ function letter(n: number) {
 
 function App() {
   const [role, setRole] = useState<Role | null>(null);
+  const [splashDone, setSplashDone] = useState(false);
 
+  if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role) return <Landing onPick={setRole} />;
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -102,6 +105,52 @@ function App() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {role === "teacher" ? <TeacherDashboard /> : <StudentParentDashboard role={role} />}
       </main>
+    </div>
+  );
+}
+
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setFadeOut(true), 2800);
+    const t2 = setTimeout(() => onDone(), 3500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [onDone]);
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-700 ${fadeOut ? "opacity-0" : "opacity-100"}`}
+    >
+      <img
+        src={splashBg}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-violet-950/70 to-emerald-950/80" />
+      <div className="relative z-10 mx-auto max-w-lg px-6 text-center">
+        <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md ring-1 ring-white/20 shadow-2xl">
+          <GraduationCap className="h-10 w-10 text-white" />
+        </div>
+        <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+          G-TECH AUTOMATION
+        </h1>
+        <p className="mt-3 text-sm font-medium uppercase tracking-[0.2em] text-indigo-200">
+          Student Performance Tracker
+        </p>
+        <div className="mt-8 flex justify-center gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="inline-block h-2 w-2 animate-bounce rounded-full bg-white/80"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
