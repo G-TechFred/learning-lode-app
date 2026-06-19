@@ -24,9 +24,16 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+.output/
