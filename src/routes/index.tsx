@@ -17,6 +17,8 @@ import {
   LogIn,
   ChevronRight,
   Bell,
+  HandMetal,
+  MessageSquare,
 } from "lucide-react";
 import {
   LineChart,
@@ -37,14 +39,23 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "G-TECH AUTOMATION — Automated Student Performance Tracker" },
+      { title: "G-TECH AUTOMATION — Student Performance Tracker" },
       { name: "description", content: "Modern dashboard for teachers, students and parents to track grades, attendance and progress in real time." },
       { property: "og:title", content: "G-TECH AUTOMATION — Student Performance Tracker" },
       { property: "og:description", content: "Real-time analytics for teachers, students and parents." },
@@ -56,14 +67,25 @@ export const Route = createFileRoute("/")({
 type Role = "teacher" | "student" | "parent";
 
 const SUBJECTS = ["Math", "Science", "English", "History"] as const;
+type Subject = typeof SUBJECTS[number];
 
-const STUDENTS = [
-  { id: 1, name: "Amara Okafor", class: "10-A", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
-  { id: 2, name: "Liam Chen", class: "10-A", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
-  { id: 3, name: "Sofia Martinez", class: "10-B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
-  { id: 4, name: "Noah Patel", class: "10-B", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
-  { id: 5, name: "Zara Ahmed", class: "10-A", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
-  { id: 6, name: "Ethan Brooks", class: "10-B", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
+type Student = {
+  id: number;
+  name: string;
+  class: string;
+  grades: Record<Subject, number>;
+  attendance: number;
+  participation: Record<Subject, number>;
+  remarks: Record<Subject, string>;
+};
+
+const INITIAL_STUDENTS: Student[] = [
+  { id: 1, name: "Amara Okafor", class: "10-A", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
+  { id: 2, name: "Liam Chen", class: "10-A", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
+  { id: 3, name: "Sofia Martinez", class: "10-B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
+  { id: 4, name: "Noah Patel", class: "10-B", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
+  { id: 5, name: "Zara Ahmed", class: "10-A", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
+  { id: 6, name: "Ethan Brooks", class: "10-B", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
 ];
 
 const TERM_TREND = [
@@ -73,12 +95,12 @@ const TERM_TREND = [
   { term: "Finals", avg: 86 },
 ];
 
-function overall(s: typeof STUDENTS[number]) {
+function overall(s: Student) {
   const v = Object.values(s.grades);
   return Math.round(v.reduce((a, b) => a + b, 0) / v.length);
 }
 
-function statusOf(s: typeof STUDENTS[number]) {
+function statusOf(s: Student) {
   const g = overall(s);
   if (g < 70 || s.attendance < 85) return "at-risk" as const;
   if (g >= 85) return "excelling" as const;
@@ -97,6 +119,8 @@ function App() {
   const [pendingRole, setPendingRole] = useState<Role | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [splashDone, setSplashDone] = useState(false);
+  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
@@ -113,9 +137,23 @@ function App() {
     );
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <NavBar role={role!} setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }} />
+      <NavBar
+        role={role!}
+        setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }}
+        students={students}
+        onSelectStudent={(id) => setSelectedStudentId(id)}
+      />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {role === "teacher" ? <TeacherDashboard /> : <StudentParentDashboard role={role!} />}
+        {role === "teacher" ? (
+          <TeacherDashboard students={students} setStudents={setStudents} />
+        ) : (
+          <StudentParentDashboard
+            role={role!}
+            students={students}
+            selectedStudentId={selectedStudentId}
+            setSelectedStudentId={setSelectedStudentId}
+          />
+        )}
       </main>
     </div>
   );
@@ -351,7 +389,7 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
             </span>
           </h1>
           <p className="mt-4 text-base text-slate-300 sm:text-lg">
-            Real-time grades, attendance, and AI-powered insights for everyone in the classroom.
+            Real-time grades, attendance, and teacher-entered insights for everyone in the classroom.
           </p>
         </div>
 
@@ -379,7 +417,17 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
   );
 }
 
-function NavBar({ role, setRole }: { role: Role; setRole: (r: Role | null) => void }) {
+function NavBar({
+  role,
+  setRole,
+  students,
+  onSelectStudent,
+}: {
+  role: Role;
+  setRole: (r: Role | null) => void;
+  students: Student[];
+  onSelectStudent: (id: number) => void;
+}) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
@@ -393,13 +441,35 @@ function NavBar({ role, setRole }: { role: Role; setRole: (r: Role | null) => vo
           </div>
         </div>
 
-        <Tabs value={role} onValueChange={(v) => setRole(v as Role)} className="hidden sm:block">
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="teacher">Teacher</TabsTrigger>
-            <TabsTrigger value="student">Student</TabsTrigger>
-            <TabsTrigger value="parent">Parent</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="hidden items-center gap-2 sm:flex">
+          <Tabs value={role} onValueChange={(v) => setRole(v as Role)}>
+            <TabsList className="bg-slate-100">
+              <TabsTrigger value="teacher">Teacher</TabsTrigger>
+              <TabsTrigger value="student">Student</TabsTrigger>
+              <TabsTrigger value="parent">Parent</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {role === "teacher" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                  <Users className="h-4 w-4" /> Students
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Class roster</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {students.map((s) => (
+                  <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
+                    <span className="truncate">{s.name}</span>
+                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           <Select value={role} onValueChange={(v) => setRole(v as Role)}>
@@ -412,6 +482,25 @@ function NavBar({ role, setRole }: { role: Role; setRole: (r: Role | null) => vo
               <SelectItem value="parent">Parent</SelectItem>
             </SelectContent>
           </Select>
+          {role === "teacher" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-indigo-600 hover:bg-slate-50 sm:hidden" aria-label="Students">
+                  <Users className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Class roster</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {students.map((s) => (
+                  <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
+                    <span className="truncate">{s.name}</span>
+                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <button className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="Notifications">
             <Bell className="h-4 w-4" />
             <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
@@ -450,60 +539,54 @@ function Metric({ icon: Icon, label, value, sub, tone }: { icon: typeof Users; l
   );
 }
 
-function TeacherDashboard() {
+function TeacherDashboard({ students, setStudents }: { students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>> }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "excelling" | "average" | "at-risk">("all");
-  const [gradeOpen, setGradeOpen] = useState(false);
+  const [entryOpen, setEntryOpen] = useState(false);
 
   const stats = useMemo(() => {
-    const total = STUDENTS.length;
-    const avg = Math.round(STUDENTS.reduce((a, s) => a + overall(s), 0) / total);
-    const att = Math.round(STUDENTS.reduce((a, s) => a + s.attendance, 0) / total);
-    const risk = STUDENTS.filter((s) => statusOf(s) === "at-risk").length;
+    const total = students.length;
+    const avg = Math.round(students.reduce((a, s) => a + overall(s), 0) / total);
+    const att = Math.round(students.reduce((a, s) => a + s.attendance, 0) / total);
+    const risk = students.filter((s) => statusOf(s) === "at-risk").length;
     return { total, avg, att, risk };
-  }, []);
+  }, [students]);
 
   const subjectAvg = useMemo(
     () =>
       SUBJECTS.map((sub) => ({
         subject: sub,
-        average: Math.round(STUDENTS.reduce((a, s) => a + s.grades[sub], 0) / STUDENTS.length),
+        average: Math.round(students.reduce((a, s) => a + s.grades[sub], 0) / students.length),
       })),
-    [],
+    [students],
   );
 
   const filtered = useMemo(() => {
-    return STUDENTS.filter((s) => {
+    return students.filter((s) => {
       const matchQ = s.name.toLowerCase().includes(query.toLowerCase()) || s.class.toLowerCase().includes(query.toLowerCase());
       const matchF = filter === "all" ? true : statusOf(s) === filter;
       return matchQ && matchF;
     });
-  }, [query, filter]);
+  }, [query, filter, students]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Teacher Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Welcome back, Ms. Reyes — here's how your classes are doing.</p>
+          <p className="mt-1 text-sm text-slate-500">Welcome back, Ms. Reyes — enter grades, attendance and participation to update what parents and students see.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => toast.success("New student form opened")} className="bg-indigo-600 hover:bg-indigo-700">
-            <UserPlus className="mr-1.5 h-4 w-4" /> Add Student
-          </Button>
-          <Button onClick={() => setGradeOpen(true)} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
-            <ClipboardList className="mr-1.5 h-4 w-4" /> Bulk Input Grades
-          </Button>
-          <Button onClick={() => toast.success("Attendance marked")} variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-            <CheckSquare className="mr-1.5 h-4 w-4" /> Mark Attendance
+          <Button onClick={() => setEntryOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+            <ClipboardList className="mr-1.5 h-4 w-4" /> Enter Performance
           </Button>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric icon={Users} label="Total Students" value={String(stats.total)} sub="Across all classes" tone="indigo" />
-        <Metric icon={TrendingUp} label="Class Average" value={`${stats.avg}%`} sub="↑ 3% vs last term" tone="emerald" />
-        <Metric icon={CalendarCheck} label="Attendance Rate" value={`${stats.att}%`} sub="Past 30 days" tone="amber" />
+        <Metric icon={TrendingUp} label="Class Average" value={`${stats.avg}%`} sub="From entered grades" tone="emerald" />
+        <Metric icon={CalendarCheck} label="Attendance Rate" value={`${stats.att}%`} sub="From entered attendance" tone="amber" />
         <Metric icon={AlertTriangle} label="At-Risk Students" value={String(stats.risk)} sub="Need intervention" tone="rose" />
       </div>
 
@@ -555,7 +638,7 @@ function TeacherDashboard() {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">Student Roster</CardTitle>
-            <CardDescription>{filtered.length} of {STUDENTS.length} students</CardDescription>
+            <CardDescription>{filtered.length} of {students.length} students</CardDescription>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative">
@@ -623,7 +706,7 @@ function TeacherDashboard() {
         </CardContent>
       </Card>
 
-      <GradeFormDialog open={gradeOpen} onOpenChange={setGradeOpen} />
+      <PerformanceEntryDialog open={entryOpen} onOpenChange={setEntryOpen} students={students} setStudents={setStudents} />
     </div>
   );
 }
@@ -634,92 +717,133 @@ function StatusBadge({ status }: { status: ReturnType<typeof statusOf> }) {
   return <Badge className="border-0 bg-rose-100 text-rose-700 hover:bg-rose-100">At-Risk</Badge>;
 }
 
-function GradeFormDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const [studentId, setStudentId] = useState<string>("1");
-  const [subject, setSubject] = useState<string>("Math");
-  const [type, setType] = useState<string>("Assignment");
-  const [score, setScore] = useState<string>("");
-  const [weight, setWeight] = useState<string>("10");
+function PerformanceEntryDialog({
+  open,
+  onOpenChange,
+  students,
+  setStudents,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  students: Student[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+}) {
+  const [studentId, setStudentId] = useState<string>(String(students[0]?.id ?? "1"));
+  const [subject, setSubject] = useState<Subject>("Math");
+  const [grade, setGrade] = useState<string>("");
+  const [attendance, setAttendance] = useState<string>("");
+  const [participation, setParticipation] = useState<string>("");
+  const [remark, setRemark] = useState<string>("");
+
+  const current = students.find((s) => String(s.id) === studentId);
+
+  useEffect(() => {
+    if (!current) return;
+    setGrade(String(current.grades[subject]));
+    setAttendance(String(current.attendance));
+    setParticipation(String(current.participation[subject]));
+    setRemark(current.remarks[subject]);
+  }, [studentId, subject, current]);
+
+  const save = () => {
+    const id = Number(studentId);
+    const g = Number(grade);
+    const a = Number(attendance);
+    const p = Number(participation);
+    if (isNaN(g) || g < 0 || g > 100) return toast.error("Grade must be 0–100");
+    if (isNaN(a) || a < 0 || a > 100) return toast.error("Attendance must be 0–100");
+    if (isNaN(p) || p < 0 || p > 10) return toast.error("Participation must be 0–10");
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              grades: { ...s.grades, [subject]: g },
+              attendance: a,
+              participation: { ...s.participation, [subject]: p },
+              remarks: { ...s.remarks, [subject]: remark.trim() || s.remarks[subject] },
+            }
+          : s,
+      ),
+    );
+    toast.success(`Saved ${subject} performance for ${current?.name}`);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Input Grade</DialogTitle>
-          <DialogDescription>Record a new graded item for a student.</DialogDescription>
+          <DialogTitle>Enter Student Performance</DialogTitle>
+          <DialogDescription>What you enter here is what students and parents will see.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-          <div className="grid gap-1.5">
-            <Label>Student</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STUDENTS.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Subject</Label>
-            <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label>Assignment Type</Label>
-              <Select value={type} onValueChange={setType}>
+              <Label>Student</Label>
+              <Select value={studentId} onValueChange={setStudentId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Assignment">Assignment</SelectItem>
-                  <SelectItem value="Quiz">Quiz</SelectItem>
-                  <SelectItem value="Exam">Exam</SelectItem>
-                  <SelectItem value="Project">Project</SelectItem>
+                  {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label>Weight (%)</Label>
-              <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} />
+              <Label>Subject</Label>
+              <Select value={subject} onValueChange={(v) => setSubject(v as Subject)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-1.5">
+              <Label>Grade (0–100)</Label>
+              <Input type="number" min={0} max={100} value={grade} onChange={(e) => setGrade(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Attendance (%)</Label>
+              <Input type="number" min={0} max={100} value={attendance} onChange={(e) => setAttendance(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Participation (0–10)</Label>
+              <Input type="number" min={0} max={10} value={participation} onChange={(e) => setParticipation(e.target.value)} />
             </div>
           </div>
           <div className="grid gap-1.5">
-            <Label>Score (0–100)</Label>
-            <Input type="number" value={score} onChange={(e) => setScore(e.target.value)} placeholder="e.g. 87" />
+            <Label>Teacher Remark</Label>
+            <Textarea rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Add a note for the parent and student" />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button
-            className="bg-indigo-600 hover:bg-indigo-700"
-            onClick={() => {
-              if (!score) return toast.error("Enter a score");
-              const s = STUDENTS.find((x) => x.id === Number(studentId));
-              toast.success(`Saved ${type} (${score}%) for ${s?.name} — ${subject}`);
-              onOpenChange(false);
-              setScore("");
-            }}
-          >Save Grade</Button>
+          <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={save}>Save Performance</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function StudentParentDashboard({ role }: { role: Role }) {
-  // Pick a student to view
-  const student = STUDENTS[0];
+function StudentParentDashboard({
+  role,
+  students,
+  selectedStudentId,
+  setSelectedStudentId,
+}: {
+  role: Role;
+  students: Student[];
+  selectedStudentId: number;
+  setSelectedStudentId: (id: number) => void;
+}) {
+  const student = students.find((s) => s.id === selectedStudentId) ?? students[0];
   const gpa = overall(student);
   const present = Math.round((student.attendance / 100) * 180);
   const absent = 180 - present;
-
-  const insights = [
-    { tone: "emerald", icon: TrendingUp, text: `Great job! Your Math grade improved by 5% this week.` },
-    { tone: "amber", icon: AlertTriangle, text: `Heads up: Your Science attendance is close to dropping below 85%.` },
-    { tone: "indigo", icon: Sparkles, text: `You're in the top 10% of your class for English this term.` },
-  ];
+  const avgParticipation = (
+    Object.values(student.participation).reduce((a, b) => a + b, 0) / SUBJECTS.length
+  ).toFixed(1);
 
   return (
     <div className="space-y-6">
@@ -731,9 +855,17 @@ function StudentParentDashboard({ role }: { role: Role }) {
           <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">
             {role === "parent" ? `${student.name}'s Progress` : `Hi, ${student.name.split(" ")[0]} 👋`}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Class {student.class} · Spring Term</p>
+          <p className="mt-1 text-sm text-slate-500">Class {student.class} · Showing what the teacher has recorded</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {role === "parent" && (
+            <Select value={String(selectedStudentId)} onValueChange={(v) => setSelectedStudentId(Number(v))}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Select child" /></SelectTrigger>
+              <SelectContent>
+                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">GPA {(gpa / 25).toFixed(2)}</Badge>
           <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{student.attendance}% attendance</Badge>
         </div>
@@ -742,12 +874,12 @@ function StudentParentDashboard({ role }: { role: Role }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/20">
           <CardContent className="p-6">
-            <p className="text-xs font-medium uppercase tracking-wider text-indigo-200">Overall Average</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-indigo-200">Overall Average (from teacher)</p>
             <div className="mt-3 flex items-end gap-2">
               <span className="text-5xl font-bold tracking-tight">{gpa}%</span>
               <span className="mb-1.5 text-xl font-semibold text-indigo-200">{letter(gpa)}</span>
             </div>
-            <p className="mt-2 text-sm text-indigo-100">↑ 3% from last term — keep it up!</p>
+            <p className="mt-2 text-sm text-indigo-100">Average of all subject grades recorded by the teacher.</p>
             <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/20">
               <div className="h-full rounded-full bg-gradient-to-r from-emerald-300 to-amber-300" style={{ width: `${gpa}%` }} />
             </div>
@@ -757,7 +889,7 @@ function StudentParentDashboard({ role }: { role: Role }) {
         <Card className="border-slate-200/70 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Attendance</CardTitle>
-            <CardDescription>{present} present · {absent} absent</CardDescription>
+            <CardDescription>{present} present · {absent} absent (teacher-recorded)</CardDescription>
           </CardHeader>
           <CardContent className="grid place-items-center pb-6">
             <AttendanceGauge value={student.attendance} />
@@ -767,32 +899,30 @@ function StudentParentDashboard({ role }: { role: Role }) {
         <Card className="border-slate-200/70 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-indigo-500" /> AI Insights
+              <HandMetal className="h-4 w-4 text-indigo-500" /> Participation
             </CardTitle>
-            <CardDescription>Automated feedback for this week</CardDescription>
+            <CardDescription>Average {avgParticipation} / 10 across subjects</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2.5">
-            {insights.map((i, idx) => {
-              const tones: Record<string, string> = {
-                emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
-                amber: "bg-amber-50 text-amber-800 border-amber-100",
-                indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-              };
-              return (
-                <div key={idx} className={`flex items-start gap-2.5 rounded-lg border p-3 text-sm ${tones[i.tone]}`}>
-                  <i.icon className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{i.text}</span>
+            {SUBJECTS.map((sub) => (
+              <div key={sub}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{sub}</span>
+                  <span className="text-slate-500">{student.participation[sub]} / 10</span>
                 </div>
-              );
-            })}
+                <Progress value={student.participation[sub] * 10} className="h-1.5" />
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-slate-200/70 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Subject Breakdown</CardTitle>
-          <CardDescription>Grades, progress and teacher remarks</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MessageSquare className="h-4 w-4 text-indigo-500" /> Subject Breakdown & Teacher Remarks
+          </CardTitle>
+          <CardDescription>Grades, participation and notes recorded by the teacher</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -803,7 +933,8 @@ function StudentParentDashboard({ role }: { role: Role }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">{sub}</p>
-                      <p className="mt-0.5 text-xs text-slate-500 line-clamp-2">"{student.remarks[sub]}"</p>
+                      <p className="mt-0.5 text-xs italic text-slate-500 line-clamp-3">"{student.remarks[sub]}"</p>
+                      <p className="mt-2 text-xs text-slate-500">Participation: <span className="font-medium text-slate-700">{student.participation[sub]}/10</span></p>
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-2xl font-bold tracking-tight text-slate-900">{letter(score)}</p>
@@ -821,7 +952,7 @@ function StudentParentDashboard({ role }: { role: Role }) {
       <Card className="border-slate-200/70 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Grade Trend</CardTitle>
-          <CardDescription>Your performance across terms</CardDescription>
+          <CardDescription>Performance across terms</CardDescription>
         </CardHeader>
         <CardContent className="h-64 pl-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -831,7 +962,7 @@ function StudentParentDashboard({ role }: { role: Role }) {
               <YAxis domain={[60, 100]} stroke="#64748b" fontSize={12} />
               <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="avg" name="Your average" stroke="#10b981" strokeWidth={3} dot={{ r: 5, fill: "#10b981" }} />
+              <Line type="monotone" dataKey="avg" name="Average" stroke="#10b981" strokeWidth={3} dot={{ r: 5, fill: "#10b981" }} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
