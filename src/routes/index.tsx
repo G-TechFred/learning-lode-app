@@ -94,17 +94,192 @@ function letter(n: number) {
 }
 
 function App() {
+  const [pendingRole, setPendingRole] = useState<Role | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [splashDone, setSplashDone] = useState(false);
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
-  if (!role) return <Landing onPick={setRole} />;
+  if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
+  if (!role && pendingRole)
+    return (
+      <LoginPage
+        role={pendingRole}
+        onBack={() => setPendingRole(null)}
+        onSuccess={() => {
+          setRole(pendingRole);
+          setPendingRole(null);
+        }}
+      />
+    );
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <NavBar role={role} setRole={setRole} />
+      <NavBar role={role!} setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }} />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {role === "teacher" ? <TeacherDashboard /> : <StudentParentDashboard role={role} />}
+        {role === "teacher" ? <TeacherDashboard /> : <StudentParentDashboard role={role!} />}
       </main>
+    </div>
+  );
+}
+
+function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  if (pw.length === 0) return { label: "", score: 0, color: "bg-slate-200", valid: false, issues };
+  if (pw.length < 10) issues.push("At least 10 characters");
+  if (pw.length > 15) issues.push("No more than 15 characters");
+  const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]/.test(pw);
+  if (!hasSpecial) issues.push("Include a special character");
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNum = /\d/.test(pw);
+
+  let score = 0;
+  if (pw.length >= 10 && pw.length <= 15) score++;
+  if (hasSpecial) score++;
+  if (hasUpper && hasLower) score++;
+  if (hasNum) score++;
+
+  const labels = ["Weak", "Weak", "Strong", "Stronger", "Better"] as const;
+  const colors = ["bg-rose-500", "bg-rose-500", "bg-amber-500", "bg-indigo-500", "bg-emerald-500"];
+  return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
+}
+
+const ROLE_THEME: Record<Role, { name: string; bg: string; card: string; accent: string; ring: string; icon: typeof Users; tag: string; tagline: string }> = {
+  teacher: {
+    name: "Teacher",
+    bg: "bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900",
+    card: "bg-white",
+    accent: "bg-indigo-600 hover:bg-indigo-700",
+    ring: "focus-visible:ring-indigo-500",
+    icon: GraduationCap,
+    tag: "Educator Portal",
+    tagline: "Shape classrooms with data-driven insights.",
+  },
+  student: {
+    name: "Student",
+    bg: "bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-900",
+    card: "bg-white",
+    accent: "bg-emerald-600 hover:bg-emerald-700",
+    ring: "focus-visible:ring-emerald-500",
+    icon: BookOpen,
+    tag: "Learner Portal",
+    tagline: "Track your growth, own your journey.",
+  },
+  parent: {
+    name: "Parent",
+    bg: "bg-gradient-to-br from-amber-950 via-slate-900 to-rose-950",
+    card: "bg-white",
+    accent: "bg-amber-600 hover:bg-amber-700",
+    ring: "focus-visible:ring-amber-500",
+    icon: Award,
+    tag: "Guardian Portal",
+    tagline: "Stay close to every milestone.",
+  },
+};
+
+function LoginPage({ role, onBack, onSuccess }: { role: Role; onBack: () => void; onSuccess: () => void }) {
+  const theme = ROLE_THEME[role];
+  const Icon = theme.icon;
+  const [school, setSchool] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const strength = passwordStrength(password);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const canSubmit = school.trim().length > 1 && emailValid && strength.valid;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) {
+      toast.error("Please complete all fields correctly.");
+      return;
+    }
+    toast.success(`Welcome, ${theme.name.toLowerCase()}!`);
+    onSuccess();
+  };
+
+  return (
+    <div className={`relative min-h-screen ${theme.bg} text-white`}>
+      <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_15%_20%,#fff_0,transparent_35%),radial-gradient(circle_at_85%_75%,#fff_0,transparent_35%)]" />
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
+        <div className="mb-8 max-w-md text-center lg:mb-0 lg:flex-1 lg:text-left">
+          <button onClick={onBack} className="mb-6 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white">
+            <ChevronRight className="h-4 w-4 rotate-180" /> Back
+          </button>
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
+            <Icon className="h-7 w-7" />
+          </div>
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-white/60">{theme.tag}</p>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Sign in as {theme.name}</h1>
+          <p className="mt-3 text-sm text-white/70 sm:text-base">{theme.tagline}</p>
+        </div>
+
+        <Card className="w-full max-w-md border-0 shadow-2xl lg:flex-1">
+          <CardHeader>
+            <CardTitle className="text-xl text-slate-900">{theme.name} Login</CardTitle>
+            <CardDescription>Enter your school credentials to continue.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="school" className="text-slate-700">School Name</Label>
+                <Input id="school" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g. Greenfield High" className={theme.ring} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-slate-700">Email</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" className={theme.ring} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-slate-700">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value.slice(0, 15))}
+                    placeholder="10–15 chars, include a special char"
+                    maxLength={15}
+                    className={`pr-16 ${theme.ring}`}
+                  />
+                  <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute inset-y-0 right-2 my-auto h-7 rounded px-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                    {showPw ? "Hide" : "Show"}
+                  </button>
+                </div>
+                {password.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span key={i} className={`h-1.5 flex-1 rounded-full transition ${i < strength.score ? strength.color : "bg-slate-200"}`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={`font-semibold ${
+                        strength.label === "Weak" ? "text-rose-600" :
+                        strength.label === "Strong" ? "text-amber-600" :
+                        strength.label === "Stronger" ? "text-indigo-600" :
+                        strength.label === "Better" ? "text-emerald-600" : "text-slate-500"
+                      }`}>
+                        {strength.label}
+                      </span>
+                      <span className="text-slate-500">{password.length}/15</span>
+                    </div>
+                    {strength.issues.length > 0 && (
+                      <ul className="space-y-0.5 text-xs text-slate-500">
+                        {strength.issues.map((i) => (
+                          <li key={i}>• {i}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
+                <LogIn className="mr-2 h-4 w-4" /> Sign in
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -168,7 +343,7 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            Automated Student Performance Tracker
+            Student Performance Tracker
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             <span className="bg-gradient-to-r from-white via-indigo-200 to-emerald-200 bg-clip-text text-transparent">
