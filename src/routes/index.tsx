@@ -343,7 +343,7 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            Automated Student Performance Tracker
+            Student Performance Tracker
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             <span className="bg-gradient-to-r from-white via-indigo-200 to-emerald-200 bg-clip-text text-transparent">
