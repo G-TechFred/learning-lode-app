@@ -19,6 +19,8 @@ import {
   Bell,
   HandMetal,
   MessageSquare,
+  Settings,
+  Mail,
 } from "lucide-react";
 import {
   LineChart,
@@ -115,71 +117,7 @@ function letter(n: number) {
   return "F";
 }
 
-function App() {
-  const [pendingRole, setPendingRole] = useState<Role | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
-  const [splashDone, setSplashDone] = useState(false);
-  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
-  const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
-
-  if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
-  if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
-  if (!role && pendingRole)
-    return (
-      <LoginPage
-        role={pendingRole}
-        onBack={() => setPendingRole(null)}
-        onSuccess={() => {
-          setRole(pendingRole);
-          setPendingRole(null);
-        }}
-      />
-    );
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <NavBar
-        role={role!}
-        setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }}
-        students={students}
-        onSelectStudent={(id) => setSelectedStudentId(id)}
-      />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {role === "teacher" ? (
-          <TeacherDashboard students={students} setStudents={setStudents} />
-        ) : (
-          <StudentParentDashboard
-            role={role!}
-            students={students}
-            selectedStudentId={selectedStudentId}
-            setSelectedStudentId={setSelectedStudentId}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-
-function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
-  const issues: string[] = [];
-  if (pw.length === 0) return { label: "", score: 0, color: "bg-slate-200", valid: false, issues };
-  if (pw.length < 10) issues.push("At least 10 characters");
-  if (pw.length > 15) issues.push("No more than 15 characters");
-  const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]/.test(pw);
-  if (!hasSpecial) issues.push("Include a special character");
-  const hasUpper = /[A-Z]/.test(pw);
-  const hasLower = /[a-z]/.test(pw);
-  const hasNum = /\d/.test(pw);
-
-  let score = 0;
-  if (pw.length >= 10 && pw.length <= 15) score++;
-  if (hasSpecial) score++;
-  if (hasUpper && hasLower) score++;
-  if (hasNum) score++;
-
-  const labels = ["Weak", "Weak", "Strong", "Stronger", "Better"] as const;
-  const colors = ["bg-rose-500", "bg-rose-500", "bg-amber-500", "bg-indigo-500", "bg-emerald-500"];
-  return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
-}
+type AuthScreen = "login" | "forgot-password" | "reset-password";
 
 const ROLE_THEME: Record<Role, { name: string; bg: string; card: string; accent: string; ring: string; icon: typeof Users; tag: string; tagline: string }> = {
   teacher: {
@@ -214,17 +152,132 @@ const ROLE_THEME: Record<Role, { name: string; bg: string; card: string; accent:
   },
 };
 
-function LoginPage({ role, onBack, onSuccess }: { role: Role; onBack: () => void; onSuccess: () => void }) {
+const TEACHER_REMARKS = {
+  good: [
+    "Excellent work! Shows outstanding mastery of the subject.",
+    "Consistently demonstrates strong understanding and engagement.",
+    "Exceptional effort and dedication to learning.",
+    "Actively participates and contributes thoughtful insights.",
+    "Shows remarkable improvement throughout the term.",
+    "Demonstrates problem-solving skills and critical thinking.",
+    "Very collaborative and supportive of peers.",
+    "Completes assignments with care and attention to detail.",
+    "Asks insightful questions and seeks clarification.",
+    "Shows genuine interest and curiosity in the subject.",
+    "Well-prepared and organized in all class activities.",
+    "Displays leadership qualities and takes initiative.",
+    "Shows creativity and original thinking in assignments.",
+    "Reliable and consistent in academic performance.",
+    "Demonstrates excellent time management skills.",
+    "Shows respect and positive attitude toward learning.",
+    "Makes meaningful contributions to class discussions.",
+  ],
+  bad: [
+    "Needs to improve focus and reduce distractions during class.",
+    "Frequently incomplete or missing assignments.",
+    "Shows minimal effort and engagement with material.",
+    "Disruptive behavior is affecting class learning environment.",
+    "Attendance issues are impacting academic progress.",
+    "Struggling to understand fundamental concepts.",
+    "Does not actively participate or engage in discussions.",
+    "Needs to improve organization and time management.",
+    "Often unprepared for class activities and assessments.",
+    "Shows little interest or motivation in the subject.",
+    "Communication and collaboration with peers needs work.",
+    "Requires more focus on accuracy and quality of work.",
+    "Behavior concerns are hindering academic progress.",
+  ],
+};
+
+function handleGmailLogin(onSuccess: (firstName: string) => void) {
+  // Simulate Gmail login - In production, use @react-oauth/google
+  // For now, we'll create a realistic demo
+  const gmailAccounts = [
+    { name: "John Smith", email: "john.smith@gmail.com" },
+    { name: "Sarah Johnson", email: "sarah.johnson@gmail.com" },
+    { name: "Michael Brown", email: "michael.brown@gmail.com" },
+    { name: "Emily Davis", email: "emily.davis@gmail.com" },
+    { name: "James Wilson", email: "james.wilson@gmail.com" },
+  ];
+
+  // Pick a random account to simulate different users
+  const account = gmailAccounts[Math.floor(Math.random() * gmailAccounts.length)];
+  const firstName = account.name.split(" ")[0];
+
+  toast.success(`Welcome, ${firstName}! Logged in with ${account.email}`);
+  onSuccess(firstName);
+}
+
+function ForgotPasswordPage({ role, onBack, onSubmit }: { role: Role; onBack: () => void; onSubmit: (email: string) => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [school, setSchool] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const strength = passwordStrength(password);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const canSubmit = school.trim().length > 1 && emailValid && strength.valid;
+  const canSubmit = school.trim().length > 1 && emailValid;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) {
+      toast.error("Please enter valid school name and email.");
+      return;
+    }
+    onSubmit(email);
+  };
+
+  return (
+    <div className={`relative min-h-screen ${theme.bg} text-white`}>
+      <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_15%_20%,#fff_0,transparent_35%),radial-gradient(circle_at_85%_75%,#fff_0,transparent_35%)]" />
+      <button onClick={onBack} className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white sm:left-6 sm:top-6">
+        <ChevronRight className="h-4 w-4 rotate-180" /> Back
+      </button>
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
+        <div className="mb-8 max-w-md text-center lg:mb-0 lg:flex-1 lg:text-left">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
+            <Icon className="h-7 w-7" />
+          </div>
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-white/60">{theme.tag}</p>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Reset Your Password</h1>
+          <p className="mt-3 text-sm text-white/70 sm:text-base">Enter your school name and email to receive a verification link.</p>
+        </div>
+
+        <Card className="w-full max-w-md border-0 shadow-2xl lg:flex-1">
+          <CardHeader>
+            <CardTitle className="text-xl text-slate-900">Forgot Password</CardTitle>
+            <CardDescription>We'll send you a verification link via email.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="school-forgot" className="text-slate-700">School Name</Label>
+                <Input id="school-forgot" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g. Greenfield High" className={theme.ring} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email-forgot" className="text-slate-700">Email Address</Label>
+                <Input id="email-forgot" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" className={theme.ring} />
+              </div>
+              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
+                Send Verification Link
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordPage({ role, email, onBack, onSuccess }: { role: Role; email: string; onBack: () => void; onSuccess: () => void }) {
+  const theme = ROLE_THEME[role];
+  const Icon = theme.icon;
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const strength = passwordStrength(newPassword);
+
+  const passwordsMatch = newPassword === confirmPassword && newPassword.length > 0;
+  const canSubmit = strength.valid && passwordsMatch;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,33 +285,283 @@ function LoginPage({ role, onBack, onSuccess }: { role: Role; onBack: () => void
       toast.error("Please complete all fields correctly.");
       return;
     }
-    toast.success(`Welcome, ${theme.name.toLowerCase()}!`);
     onSuccess();
   };
 
   return (
     <div className={`relative min-h-screen ${theme.bg} text-white`}>
       <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_15%_20%,#fff_0,transparent_35%),radial-gradient(circle_at_85%_75%,#fff_0,transparent_35%)]" />
+      <button onClick={onBack} className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white sm:left-6 sm:top-6">
+        <ChevronRight className="h-4 w-4 rotate-180" /> Back
+      </button>
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
         <div className="mb-8 max-w-md text-center lg:mb-0 lg:flex-1 lg:text-left">
-          <button onClick={onBack} className="mb-6 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white">
-            <ChevronRight className="h-4 w-4 rotate-180" /> Back
-          </button>
           <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
             <Icon className="h-7 w-7" />
           </div>
           <p className="text-xs font-medium uppercase tracking-[0.25em] text-white/60">{theme.tag}</p>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Sign in as {theme.name}</h1>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Create New Password</h1>
+          <p className="mt-3 text-sm text-white/70 sm:text-base">Verification successful. Enter your new password for <span className="font-medium">{email}</span></p>
+        </div>
+
+        <Card className="w-full max-w-md border-0 shadow-2xl lg:flex-1">
+          <CardHeader>
+            <CardTitle className="text-xl text-slate-900">Reset Password</CardTitle>
+            <CardDescription>Enter and confirm your new password.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password" className="text-slate-700">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showPw ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value.slice(0, 15))}
+                    placeholder="10–15 chars, include a special char"
+                    maxLength={15}
+                    className={`pr-16 ${theme.ring}`}
+                  />
+                  <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute inset-y-0 right-2 my-auto h-7 rounded px-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
+                    {showPw ? "Hide" : "Show"}
+                  </button>
+                </div>
+                {newPassword.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span key={i} className={`h-1.5 flex-1 rounded-full transition ${i < strength.score ? strength.color : "bg-slate-200"}`} />
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={`font-semibold ${
+                        strength.label === "Weak" ? "text-rose-600" :
+                        strength.label === "Strong" ? "text-amber-600" :
+                        strength.label === "Stronger" ? "text-indigo-600" :
+                        strength.label === "Better" ? "text-emerald-600" : "text-slate-500"
+                      }`}>
+                        {strength.label}
+                      </span>
+                      <span className="text-slate-500">{newPassword.length}/15</span>
+                    </div>
+                    {strength.issues.length > 0 && (
+                      <ul className="space-y-0.5 text-xs text-slate-500">
+                        {strength.issues.map((i) => (
+                          <li key={i}>• {i}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-password-reset" className="text-slate-700">Confirm Password</Label>
+                <Input
+                  id="confirm-password-reset"
+                  type={showPw ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value.slice(0, 15))}
+                  placeholder="Re-enter your password"
+                  maxLength={15}
+                  className={theme.ring}
+                />
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-xs text-rose-600">Passwords do not match</p>
+                )}
+              </div>
+              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
+                Reset Password
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [pendingRole, setPendingRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [splashDone, setSplashDone] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
+
+  if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
+  if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
+  if (!role && pendingRole) {
+    if (authScreen === "forgot-password") {
+      return (
+        <ForgotPasswordPage
+          role={pendingRole}
+          onBack={() => setAuthScreen("login")}
+          onSubmit={(email) => {
+            setResetEmail(email);
+            setAuthScreen("reset-password");
+            toast.success("Verification email sent! Simulating verification...");
+          }}
+        />
+      );
+    }
+    if (authScreen === "reset-password") {
+      return (
+        <ResetPasswordPage
+          role={pendingRole}
+          email={resetEmail}
+          onBack={() => {
+            setAuthScreen("login");
+            setResetEmail("");
+          }}
+          onSuccess={() => {
+            setRole(pendingRole);
+            setPendingRole(null);
+            setAuthScreen("login");
+            setIsSignUp(false);
+            setResetEmail("");
+            toast.success("Password reset successfully!");
+          }}
+        />
+      );
+    }
+    return (
+      <LoginPage
+        role={pendingRole}
+        isSignUp={isSignUp}
+        onBack={() => setPendingRole(null)}
+        onSignUpClick={() => setIsSignUp(!isSignUp)}
+        onForgotPassword={() => setAuthScreen("forgot-password")}
+        onSuccess={(firstName) => {
+          setUserName(firstName);
+          setRole(pendingRole);
+          setPendingRole(null);
+          setIsSignUp(false);
+        }}
+      />
+    );
+  }
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <NavBar
+        role={role!}
+        setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }}
+        students={students}
+        onSelectStudent={(id) => setSelectedStudentId(id)}
+        onNotificationClick={() => setShowNotifications(true)}
+      />
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {role === "teacher" ? (
+          <TeacherDashboard userName={userName} students={students} setStudents={setStudents} />
+        ) : (
+          <StudentParentDashboard
+            role={role!}
+            students={students}
+            selectedStudentId={selectedStudentId}
+            setSelectedStudentId={setSelectedStudentId}
+            onBack={() => setRole(null)}
+          />
+        )}
+      </main>
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notifications</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 text-center text-slate-500">
+            <Bell className="mx-auto h-12 w-12 mb-2 opacity-50" />
+            <p className="text-sm">No new notifications</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  if (pw.length === 0) return { label: "", score: 0, color: "bg-slate-200", valid: false, issues };
+  if (pw.length < 10) issues.push("At least 10 characters");
+  if (pw.length > 15) issues.push("No more than 15 characters");
+  const hasSpecial = /[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]/.test(pw);
+  if (!hasSpecial) issues.push("Include a special character");
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNum = /\d/.test(pw);
+
+  let score = 0;
+  if (pw.length >= 10 && pw.length <= 15) score++;
+  if (hasSpecial) score++;
+  if (hasUpper && hasLower) score++;
+  if (hasNum) score++;
+
+  const labels = ["Weak", "Weak", "Strong", "Stronger", "Better"] as const;
+  const colors = ["bg-rose-500", "bg-rose-500", "bg-amber-500", "bg-indigo-500", "bg-emerald-500"];
+  return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
+}
+
+function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
+  const theme = ROLE_THEME[role];
+  const Icon = theme.icon;
+  const [fullName, setFullName] = useState("");
+  const [school, setSchool] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const strength = passwordStrength(password);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const passwordsMatch = isSignUp ? password === confirmPassword && password.length > 0 : true;
+  const canSubmit = isSignUp
+    ? fullName.trim().length > 1 && school.trim().length > 1 && emailValid && strength.valid && passwordsMatch
+    : school.trim().length > 1 && emailValid && strength.valid;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) {
+      toast.error("Please complete all fields correctly.");
+      return;
+    }
+    const firstName = isSignUp ? fullName.split(" ")[0] : "User";
+    const action = isSignUp ? "Account created" : "Welcome";
+    toast.success(`${action}, ${firstName}!`);
+    onSuccess(firstName);
+  };
+
+  return (
+    <div className={`relative min-h-screen ${theme.bg} text-white`}>
+      <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_15%_20%,#fff_0,transparent_35%),radial-gradient(circle_at_85%_75%,#fff_0,transparent_35%)]" />
+      <button onClick={onBack} className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white sm:left-6 sm:top-6">
+        <ChevronRight className="h-4 w-4 rotate-180" /> Back
+      </button>
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
+        <div className="mb-8 max-w-md text-center lg:mb-0 lg:flex-1 lg:text-left">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
+            <Icon className="h-7 w-7" />
+          </div>
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-white/60">{theme.tag}</p>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">{isSignUp ? "Create account as" : "Sign in as"} {theme.name}</h1>
           <p className="mt-3 text-sm text-white/70 sm:text-base">{theme.tagline}</p>
         </div>
 
         <Card className="w-full max-w-md border-0 shadow-2xl lg:flex-1">
           <CardHeader>
-            <CardTitle className="text-xl text-slate-900">{theme.name} Login</CardTitle>
-            <CardDescription>Enter your school credentials to continue.</CardDescription>
+            <CardTitle className="text-xl text-slate-900">{isSignUp ? "Create Account" : theme.name} {isSignUp ? "" : "Login"}</CardTitle>
+            <CardDescription>{isSignUp ? "Enter your details to create an account." : "Enter your school credentials to continue."}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignUp && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName" className="text-slate-700">Full Name</Label>
+                  <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" className={theme.ring} />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="school" className="text-slate-700">School Name</Label>
                 <Input id="school" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g. Greenfield High" className={theme.ring} />
@@ -268,7 +571,18 @@ function LoginPage({ role, onBack, onSuccess }: { role: Role; onBack: () => void
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" className={theme.ring} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-slate-700">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-slate-700">Password</Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={onForgotPassword}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      Forgot?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -311,10 +625,51 @@ function LoginPage({ role, onBack, onSuccess }: { role: Role; onBack: () => void
                   </div>
                 )}
               </div>
+              {isSignUp && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmPassword" className="text-slate-700">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type={showPw ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value.slice(0, 15))}
+                    placeholder="Re-enter your password"
+                    maxLength={15}
+                    className={theme.ring}
+                  />
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xs text-rose-600">Passwords do not match</p>
+                  )}
+                </div>
+              )}
               <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
-                <LogIn className="mr-2 h-4 w-4" /> Sign in
+                <UserPlus className="mr-2 h-4 w-4" /> {isSignUp ? "Create Account" : "Sign in"}
               </Button>
             </form>
+            <div className="relative mt-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-500">Or continue with</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleGmailLogin(onSuccess)}
+              className="w-full mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <Mail className="h-4 w-4" /> Gmail
+            </button>
+            <div className="mt-4 text-center text-sm text-slate-600">
+              {isSignUp ? "Already have an account?" : "Don't have an account?"} {" "}
+              <button
+                onClick={onSignUpClick}
+                className="font-semibold text-slate-900 hover:underline"
+              >
+                {isSignUp ? "Sign in" : "Sign up"}
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -422,11 +777,13 @@ function NavBar({
   setRole,
   students,
   onSelectStudent,
+  onNotificationClick,
 }: {
   role: Role;
   setRole: (r: Role | null) => void;
   students: Student[];
   onSelectStudent: (id: number) => void;
+  onNotificationClick: () => void;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
@@ -501,18 +858,50 @@ function NavBar({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <button className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="Notifications">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="Settings">
+                <Settings className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Settings</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <span>Profile Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Change Password</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Notification Preferences</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>Account Privacy</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <span>Help & Support</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <span>About</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setRole(null)} className="text-red-600">
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button onClick={onNotificationClick} className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="Notifications">
             <Bell className="h-4 w-4" />
             <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
-          </button>
-          <button onClick={() => setRole(null)} className="hidden rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:inline-flex">
-            Sign out
           </button>
         </div>
       </div>
     </header>
   );
 }
+
 
 function Metric({ icon: Icon, label, value, sub, tone }: { icon: typeof Users; label: string; value: string; sub?: string; tone: "indigo" | "emerald" | "amber" | "rose" }) {
   const tones = {
@@ -539,7 +928,7 @@ function Metric({ icon: Icon, label, value, sub, tone }: { icon: typeof Users; l
   );
 }
 
-function TeacherDashboard({ students, setStudents }: { students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>> }) {
+function TeacherDashboard({ userName, students, setStudents }: { userName: string; students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>> }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "excelling" | "average" | "at-risk">("all");
   const [entryOpen, setEntryOpen] = useState(false);
@@ -574,7 +963,7 @@ function TeacherDashboard({ students, setStudents }: { students: Student[]; setS
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Teacher Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Welcome back, Ms. Reyes — enter grades, attendance and participation to update what parents and students see.</p>
+          <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — enter grades, attendance and participation to update what parents and students see.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setEntryOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
@@ -814,7 +1203,18 @@ function PerformanceEntryDialog({
           </div>
           <div className="grid gap-1.5">
             <Label>Teacher Remark</Label>
-            <Textarea rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Add a note for the parent and student" />
+            <Select value={remark} onValueChange={setRemark}>
+              <SelectTrigger><SelectValue placeholder="Select a remark" /></SelectTrigger>
+              <SelectContent className="max-h-96">
+                <SelectItem value="">-- Clear Selection --</SelectItem>
+                {TEACHER_REMARKS.good.map((r, i) => (
+                  <SelectItem key={`good-${i}`} value={r}>{r}</SelectItem>
+                ))}
+                {TEACHER_REMARKS.bad.map((r, i) => (
+                  <SelectItem key={`bad-${i}`} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
@@ -831,11 +1231,13 @@ function StudentParentDashboard({
   students,
   selectedStudentId,
   setSelectedStudentId,
+  onBack,
 }: {
   role: Role;
   students: Student[];
   selectedStudentId: number;
   setSelectedStudentId: (id: number) => void;
+  onBack: () => void;
 }) {
   const student = students.find((s) => s.id === selectedStudentId) ?? students[0];
   const gpa = overall(student);
@@ -849,6 +1251,9 @@ function StudentParentDashboard({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
+          <button onClick={onBack} className="mb-3 inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700">
+            <ChevronRight className="h-4 w-4 rotate-180" /> Back
+          </button>
           <p className="text-xs font-medium uppercase tracking-wider text-indigo-600">
             {role === "parent" ? "Parent view" : "Student view"}
           </p>
