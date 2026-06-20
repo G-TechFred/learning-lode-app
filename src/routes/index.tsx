@@ -730,37 +730,37 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
     { id: "parent", title: "Parent", desc: "Stay informed about your child's journey.", icon: Award, accent: "from-amber-500 to-amber-600" },
   ];
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
-      <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,#6366f1_0,transparent_40%),radial-gradient(circle_at_80%_60%,#10b981_0,transparent_40%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#1a0f00] via-[#3a1d00] to-[#1a0f00] text-white">
+      <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_20%_20%,#F68B1E_0,transparent_45%),radial-gradient(circle_at_80%_70%,#ff6b00_0,transparent_45%)]" />
+      <div className="absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:48px_48px]" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#F68B1E]/30 bg-[#F68B1E]/10 px-4 py-1.5 text-xs font-medium backdrop-blur animate-magical-rise">
+            <Sparkles className="h-3.5 w-3.5 text-[#F68B1E]" />
             Student Performance Tracker
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            <span className="bg-gradient-to-r from-white via-indigo-200 to-emerald-200 bg-clip-text text-transparent">
-              G-TECH AUTOMATION
-            </span>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl animate-magical-rise" style={{ animationDelay: "120ms" }}>
+            <span className="text-magical">G-TECH AUTOMATION</span>
           </h1>
-          <p className="mt-4 text-base text-slate-300 sm:text-lg">
+          <p className="mt-4 text-base text-amber-100/80 sm:text-lg animate-magical-rise" style={{ animationDelay: "260ms" }}>
             Real-time grades, attendance, and teacher-entered insights for everyone in the classroom.
           </p>
         </div>
 
         <div className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-3">
-          {roles.map((r) => (
+          {roles.map((r, i) => (
             <button
               key={r.id}
               onClick={() => onPick(r.id)}
-              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 text-left backdrop-blur transition hover:-translate-y-1 hover:border-white/20 hover:bg-white/10"
+              style={{ animationDelay: `${400 + i * 120}ms` }}
+              className="group relative overflow-hidden rounded-2xl border border-[#F68B1E]/20 bg-white/5 p-6 text-left backdrop-blur transition hover:-translate-y-1 hover:border-[#F68B1E]/60 hover:bg-[#F68B1E]/10 hover:shadow-[0_20px_50px_-15px_rgba(246,139,30,0.5)] animate-magical-rise"
             >
-              <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${r.accent} shadow-lg`}>
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#F68B1E] to-[#ff6b00] shadow-lg shadow-[#F68B1E]/30">
                 <r.icon className="h-6 w-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold">{r.title}</h3>
-              <p className="mt-1 text-sm text-slate-300">{r.desc}</p>
-              <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-300 group-hover:text-indigo-200">
+              <p className="mt-1 text-sm text-amber-100/70">{r.desc}</p>
+              <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#F68B1E] group-hover:text-amber-200">
                 <LogIn className="h-4 w-4" /> Continue
                 <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </div>
