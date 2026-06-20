@@ -1120,6 +1120,222 @@ function StatusBadge({ status }: { status: ReturnType<typeof statusOf> }) {
   return <Badge className="border-0 bg-rose-100 text-rose-700 hover:bg-rose-100">At-Risk</Badge>;
 }
 
+function PerformanceEntryPage({
+  students,
+  setStudents,
+  onBack,
+}: {
+  students: Student[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  onBack: () => void;
+}) {
+  const [studentId, setStudentId] = useState<string>(String(students[0]?.id ?? "1"));
+  const current = students.find((s) => String(s.id) === studentId)!;
+
+  const [grades, setGrades] = useState<Record<Subject, string>>(
+    Object.fromEntries(SUBJECTS.map((s) => [s, String(current.grades[s])])) as Record<Subject, string>,
+  );
+  const [participation, setParticipation] = useState<Record<Subject, string>>(
+    Object.fromEntries(SUBJECTS.map((s) => [s, String(current.participation[s])])) as Record<Subject, string>,
+  );
+  const [remarks, setRemarks] = useState<Record<Subject, string>>(
+    Object.fromEntries(SUBJECTS.map((s) => [s, current.remarks[s]])) as Record<Subject, string>,
+  );
+  const [attendance, setAttendance] = useState<string>(String(current.attendance));
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setGrades(Object.fromEntries(SUBJECTS.map((s) => [s, String(current.grades[s])])) as Record<Subject, string>);
+    setParticipation(Object.fromEntries(SUBJECTS.map((s) => [s, String(current.participation[s])])) as Record<Subject, string>);
+    setRemarks(Object.fromEntries(SUBJECTS.map((s) => [s, current.remarks[s]])) as Record<Subject, string>);
+    setAttendance(String(current.attendance));
+  }, [studentId, current]);
+
+  const errors: string[] = [];
+  const att = Number(attendance);
+  if (attendance === "" || isNaN(att) || att < 0 || att > 100) errors.push("Attendance must be a number between 0 and 100.");
+  SUBJECTS.forEach((sub) => {
+    const g = Number(grades[sub]);
+    if (grades[sub] === "" || isNaN(g) || g < 0 || g > 100) errors.push(`${sub} grade must be 0–100.`);
+    const p = Number(participation[sub]);
+    if (participation[sub] === "" || isNaN(p) || p < 0 || p > 10) errors.push(`${sub} participation must be 0–10.`);
+    if ((remarks[sub]?.length ?? 0) > 280) errors.push(`${sub} remark must be 280 characters or fewer.`);
+  });
+
+  const canSave = errors.length === 0;
+
+  const doSave = () => {
+    if (!canSave) {
+      toast.error(errors[0]);
+      return;
+    }
+    setSaving(true);
+    const id = Number(studentId);
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              attendance: Number(attendance),
+              grades: Object.fromEntries(SUBJECTS.map((sub) => [sub, Number(grades[sub])])) as Record<Subject, number>,
+              participation: Object.fromEntries(SUBJECTS.map((sub) => [sub, Number(participation[sub])])) as Record<Subject, number>,
+              remarks: Object.fromEntries(SUBJECTS.map((sub) => [sub, (remarks[sub] ?? "").trim() || s.remarks[sub]])) as Record<Subject, string>,
+            }
+          : s,
+      ),
+    );
+    setTimeout(() => {
+      setSaving(false);
+      setConfirmOpen(true);
+      toast.success(`Performance saved for ${current.name}`);
+    }, 250);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <button onClick={onBack} className="mb-3 inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700">
+            <ChevronRight className="h-4 w-4 rotate-180" /> Back to dashboard
+          </button>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Enter Performance</h1>
+          <p className="mt-1 text-sm text-slate-500">Update grades, attendance, participation and remarks. Saved values appear instantly on student and parent views.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onBack}>Cancel</Button>
+          <Button onClick={doSave} disabled={!canSave || saving} className="bg-indigo-600 hover:bg-indigo-700">
+            {saving ? "Saving…" : "Save All"}
+          </Button>
+        </div>
+      </div>
+
+      <Card className="border-slate-200/70 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base">Student</CardTitle>
+          <CardDescription>Choose a student and class-wide attendance percentage.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-1.5">
+            <Label>Student</Label>
+            <Select value={studentId} onValueChange={setStudentId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {s.class}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Attendance (%)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={attendance}
+              onChange={(e) => setAttendance(e.target.value)}
+              className={attendance !== "" && (Number(attendance) < 0 || Number(attendance) > 100) ? "border-rose-400" : ""}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200/70 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base">Per-subject Performance</CardTitle>
+          <CardDescription>Grade (0–100), participation (0–10), and a remark per subject.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {SUBJECTS.map((sub) => {
+            const g = Number(grades[sub]);
+            const p = Number(participation[sub]);
+            const gBad = grades[sub] === "" || isNaN(g) || g < 0 || g > 100;
+            const pBad = participation[sub] === "" || isNaN(p) || p < 0 || p > 10;
+            const rBad = (remarks[sub]?.length ?? 0) > 280;
+            return (
+              <div key={sub} className="rounded-xl border border-slate-200/70 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-900">{sub}</h3>
+                  {!gBad && !isNaN(g) && (
+                    <span className="text-xs text-slate-500">Grade: <span className="font-medium text-slate-700">{letter(g)}</span></span>
+                  )}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label>Grade (0–100)</Label>
+                    <Input
+                      type="number" min={0} max={100}
+                      value={grades[sub]}
+                      onChange={(e) => setGrades((prev) => ({ ...prev, [sub]: e.target.value }))}
+                      className={gBad ? "border-rose-400" : ""}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Participation (0–10)</Label>
+                    <Input
+                      type="number" min={0} max={10}
+                      value={participation[sub]}
+                      onChange={(e) => setParticipation((prev) => ({ ...prev, [sub]: e.target.value }))}
+                      className={pBad ? "border-rose-400" : ""}
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>Teacher Remark</Label>
+                    <span className={`text-xs ${rBad ? "text-rose-600" : "text-slate-400"}`}>{(remarks[sub]?.length ?? 0)}/280</span>
+                  </div>
+                  <Textarea
+                    value={remarks[sub] ?? ""}
+                    onChange={(e) => setRemarks((prev) => ({ ...prev, [sub]: e.target.value }))}
+                    placeholder={`Notes about ${current.name}'s ${sub} performance…`}
+                    className={rBad ? "border-rose-400" : ""}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {errors.length > 0 && (
+        <Card className="border-rose-200 bg-rose-50/50">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold text-rose-700">Please fix the following before saving:</p>
+            <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-rose-700">
+              {errors.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onBack}>Cancel</Button>
+        <Button onClick={doSave} disabled={!canSave || saving} className="bg-indigo-600 hover:bg-indigo-700">
+          {saving ? "Saving…" : "Save All"}
+        </Button>
+      </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-emerald-600" /> Saved successfully
+            </DialogTitle>
+            <DialogDescription>
+              {current.name}'s performance has been updated across all subjects. Students and parents will see the new data immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Stay on page</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={onBack}>Back to dashboard</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function PerformanceEntryDialog({
   open,
   onOpenChange,
