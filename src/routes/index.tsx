@@ -932,6 +932,17 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "excelling" | "average" | "at-risk">("all");
   const [entryOpen, setEntryOpen] = useState(false);
+  const [view, setView] = useState<"overview" | "entry">("overview");
+
+  if (view === "entry") {
+    return (
+      <PerformanceEntryPage
+        students={students}
+        setStudents={setStudents}
+        onBack={() => setView("overview")}
+      />
+    );
+  }
 
   const stats = useMemo(() => {
     const total = students.length;
