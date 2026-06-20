@@ -977,8 +977,11 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
           <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — enter grades, attendance and participation to update what parents and students see.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setEntryOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => setView("entry")} className="bg-indigo-600 hover:bg-indigo-700">
             <ClipboardList className="mr-1.5 h-4 w-4" /> Enter Performance
+          </Button>
+          <Button onClick={() => setEntryOpen(true)} variant="outline">
+            <CheckSquare className="mr-1.5 h-4 w-4" /> Quick Entry
           </Button>
         </div>
       </div>
