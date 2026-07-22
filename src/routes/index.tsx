@@ -71,23 +71,41 @@ type Role = "teacher" | "student" | "parent";
 const SUBJECTS = ["Math", "Science", "English", "History"] as const;
 type Subject = typeof SUBJECTS[number];
 
+const LEVELS = [
+  "Basic 1", "Basic 2", "Basic 3", "Basic 4", "Basic 5", "Basic 6",
+  "JHS 1", "JHS 2", "JHS 3",
+] as const;
+type Level = typeof LEVELS[number];
+
+const STREAMS = ["A", "B", "Unique", "Gold", "Silver"] as const;
+type Stream = typeof STREAMS[number];
+
+const TERMS = ["Term 1", "Term 2", "Term 3"] as const;
+type Term = typeof TERMS[number];
+
+const ACADEMIC_YEARS = ["2024/2025", "2025/2026", "2026/2027"] as const;
+type AcademicYear = typeof ACADEMIC_YEARS[number];
+
 type Student = {
   id: number;
   name: string;
-  class: string;
+  level: Level;
+  stream: Stream;
   grades: Record<Subject, number>;
   attendance: number;
   participation: Record<Subject, number>;
   remarks: Record<Subject, string>;
 };
 
+const classLabel = (s: Pick<Student, "level" | "stream">) => `${s.level} ${s.stream}`;
+
 const INITIAL_STUDENTS: Student[] = [
-  { id: 1, name: "Amara Okafor", class: "10-A", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
-  { id: 2, name: "Liam Chen", class: "10-A", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
-  { id: 3, name: "Sofia Martinez", class: "10-B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
-  { id: 4, name: "Noah Patel", class: "10-B", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
-  { id: 5, name: "Zara Ahmed", class: "10-A", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
-  { id: 6, name: "Ethan Brooks", class: "10-B", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
+  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
+  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
+  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
+  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
+  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
+  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
 ];
 
 const TERM_TREND = [
@@ -392,6 +410,8 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
+  const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
+  const [term, setTerm] = useState<Term>("Term 1");
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
@@ -456,7 +476,7 @@ function App() {
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {role === "teacher" ? (
-          <TeacherDashboard userName={userName} students={students} setStudents={setStudents} />
+          <TeacherDashboard userName={userName} students={students} setStudents={setStudents} academicYear={academicYear} setAcademicYear={setAcademicYear} term={term} setTerm={setTerm} />
         ) : (
           <StudentParentDashboard
             role={role!}
@@ -820,7 +840,7 @@ function NavBar({
                 {students.map((s) => (
                   <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
                     <span className="truncate">{s.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                    <span className="ml-auto text-xs text-slate-400">{classLabel(s)}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -852,7 +872,7 @@ function NavBar({
                 {students.map((s) => (
                   <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
                     <span className="truncate">{s.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                    <span className="ml-auto text-xs text-slate-400">{classLabel(s)}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -928,9 +948,11 @@ function Metric({ icon: Icon, label, value, sub, tone }: { icon: typeof Users; l
   );
 }
 
-function TeacherDashboard({ userName, students, setStudents }: { userName: string; students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>> }) {
+function TeacherDashboard({ userName, students, setStudents, academicYear, setAcademicYear, term, setTerm }: { userName: string; students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>>; academicYear: AcademicYear; setAcademicYear: (y: AcademicYear) => void; term: Term; setTerm: (t: Term) => void }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "excelling" | "average" | "at-risk">("all");
+  const [levelFilter, setLevelFilter] = useState<"all" | Level>("all");
+  const [streamFilter, setStreamFilter] = useState<"all" | Stream>("all");
   const [entryOpen, setEntryOpen] = useState(false);
   const [view, setView] = useState<"overview" | "entry">("overview");
 
@@ -954,7 +976,9 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
-      const matchQ = s.name.toLowerCase().includes(query.toLowerCase()) || s.class.toLowerCase().includes(query.toLowerCase());
+      const matchQ = s.name.toLowerCase().includes(query.toLowerCase()) || classLabel(s).toLowerCase().includes(query.toLowerCase());
+      if (levelFilter !== "all" && s.level !== levelFilter) return false;
+      if (streamFilter !== "all" && s.stream !== streamFilter) return false;
       const matchF = filter === "all" ? true : statusOf(s) === filter;
       return matchQ && matchF;
     });
@@ -977,7 +1001,7 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Teacher Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — enter grades, attendance and participation to update what parents and students see.</p>
+          <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — <span className="font-medium text-slate-700">{term}, {academicYear}</span>. Grades, attendance and participation you enter update parent and student views instantly.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setView("entry")} className="bg-indigo-600 hover:bg-indigo-700">
@@ -988,6 +1012,28 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
           </Button>
         </div>
       </div>
+
+      <Card className="border-slate-200/70 shadow-sm">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Academic Session</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{term} · {academicYear}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={academicYear} onValueChange={(v) => setAcademicYear(v as AcademicYear)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ACADEMIC_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Tabs value={term} onValueChange={(v) => setTerm(v as Term)}>
+              <TabsList className="bg-slate-100">
+                {TERMS.map((t) => <TabsTrigger key={t} value={t}>{t}</TabsTrigger>)}
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric icon={Users} label="Total Students" value={String(stats.total)} sub="Across all classes" tone="indigo" />
@@ -1046,13 +1092,27 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
             <CardTitle className="text-base">Student Roster</CardTitle>
             <CardDescription>{filtered.length} of {students.length} students</CardDescription>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or class" className="pl-8 sm:w-64" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or class" className="pl-8 sm:w-56" />
             </div>
+            <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v as "all" | Level)}>
+              <SelectTrigger className="sm:w-36"><SelectValue placeholder="Level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                {LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={streamFilter} onValueChange={(v) => setStreamFilter(v as "all" | Stream)}>
+              <SelectTrigger className="sm:w-32"><SelectValue placeholder="Stream" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All streams</SelectItem>
+                {STREAMS.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="excelling">Excelling</SelectItem>
@@ -1088,7 +1148,7 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
                           <span className="font-medium text-slate-900">{s.name}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-slate-600">{s.class}</td>
+                      <td className="px-3 py-3 text-slate-600">{classLabel(s)}</td>
                       <td className="px-3 py-3">
                         <span className="font-semibold text-slate-900">{g}%</span>
                         <span className="ml-1.5 text-xs text-slate-400">({letter(g)})</span>
@@ -1224,7 +1284,7 @@ function PerformanceEntryPage({
             <Select value={studentId} onValueChange={setStudentId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {s.class}</SelectItem>)}
+                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {classLabel(s)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -1493,7 +1553,7 @@ function StudentParentDashboard({
           <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">
             {role === "parent" ? `${student.name}'s Progress` : `Hi, ${student.name.split(" ")[0]} 👋`}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Class {student.class} · Showing what the teacher has recorded</p>
+          <p className="mt-1 text-sm text-slate-500">Class {classLabel(student)} · Showing what the teacher has recorded</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {role === "parent" && (
