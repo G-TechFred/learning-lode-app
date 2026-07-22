@@ -1001,7 +1001,7 @@ function TeacherDashboard({ userName, students, setStudents, academicYear, setAc
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Teacher Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — enter grades, attendance and participation to update what parents and students see.</p>
+          <p className="mt-1 text-sm text-slate-500">Welcome back, {userName} — <span className="font-medium text-slate-700">{term}, {academicYear}</span>. Grades, attendance and participation you enter update parent and student views instantly.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setView("entry")} className="bg-indigo-600 hover:bg-indigo-700">
@@ -1012,6 +1012,28 @@ function TeacherDashboard({ userName, students, setStudents, academicYear, setAc
           </Button>
         </div>
       </div>
+
+      <Card className="border-slate-200/70 shadow-sm">
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Academic Session</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{term} · {academicYear}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={academicYear} onValueChange={(v) => setAcademicYear(v as AcademicYear)}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ACADEMIC_YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Tabs value={term} onValueChange={(v) => setTerm(v as Term)}>
+              <TabsList className="bg-slate-100">
+                {TERMS.map((t) => <TabsTrigger key={t} value={t}>{t}</TabsTrigger>)}
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric icon={Users} label="Total Students" value={String(stats.total)} sub="Across all classes" tone="indigo" />
@@ -1070,13 +1092,27 @@ function TeacherDashboard({ userName, students, setStudents, academicYear, setAc
             <CardTitle className="text-base">Student Roster</CardTitle>
             <CardDescription>{filtered.length} of {students.length} students</CardDescription>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or class" className="pl-8 sm:w-64" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name or class" className="pl-8 sm:w-56" />
             </div>
+            <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v as "all" | Level)}>
+              <SelectTrigger className="sm:w-36"><SelectValue placeholder="Level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                {LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={streamFilter} onValueChange={(v) => setStreamFilter(v as "all" | Stream)}>
+              <SelectTrigger className="sm:w-32"><SelectValue placeholder="Stream" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All streams</SelectItem>
+                {STREAMS.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="sm:w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="excelling">Excelling</SelectItem>
