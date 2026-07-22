@@ -946,9 +946,11 @@ function Metric({ icon: Icon, label, value, sub, tone }: { icon: typeof Users; l
   );
 }
 
-function TeacherDashboard({ userName, students, setStudents }: { userName: string; students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>> }) {
+function TeacherDashboard({ userName, students, setStudents, academicYear, setAcademicYear, term, setTerm }: { userName: string; students: Student[]; setStudents: React.Dispatch<React.SetStateAction<Student[]>>; academicYear: AcademicYear; setAcademicYear: (y: AcademicYear) => void; term: Term; setTerm: (t: Term) => void }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "excelling" | "average" | "at-risk">("all");
+  const [levelFilter, setLevelFilter] = useState<"all" | Level>("all");
+  const [streamFilter, setStreamFilter] = useState<"all" | Stream>("all");
   const [entryOpen, setEntryOpen] = useState(false);
   const [view, setView] = useState<"overview" | "entry">("overview");
 
