@@ -838,7 +838,7 @@ function NavBar({
                 {students.map((s) => (
                   <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
                     <span className="truncate">{s.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                    <span className="ml-auto text-xs text-slate-400">{classLabel(s)}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -870,7 +870,7 @@ function NavBar({
                 {students.map((s) => (
                   <DropdownMenuItem key={s.id} onClick={() => { onSelectStudent(s.id); toast.success(`Viewing ${s.name}`); }}>
                     <span className="truncate">{s.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{s.class}</span>
+                    <span className="ml-auto text-xs text-slate-400">{classLabel(s)}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -972,7 +972,9 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
-      const matchQ = s.name.toLowerCase().includes(query.toLowerCase()) || s.class.toLowerCase().includes(query.toLowerCase());
+      const matchQ = s.name.toLowerCase().includes(query.toLowerCase()) || classLabel(s).toLowerCase().includes(query.toLowerCase());
+      if (levelFilter !== "all" && s.level !== levelFilter) return false;
+      if (streamFilter !== "all" && s.stream !== streamFilter) return false;
       const matchF = filter === "all" ? true : statusOf(s) === filter;
       return matchQ && matchF;
     });
@@ -1106,7 +1108,7 @@ function TeacherDashboard({ userName, students, setStudents }: { userName: strin
                           <span className="font-medium text-slate-900">{s.name}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-slate-600">{s.class}</td>
+                      <td className="px-3 py-3 text-slate-600">{classLabel(s)}</td>
                       <td className="px-3 py-3">
                         <span className="font-semibold text-slate-900">{g}%</span>
                         <span className="ml-1.5 text-xs text-slate-400">({letter(g)})</span>
@@ -1242,7 +1244,7 @@ function PerformanceEntryPage({
             <Select value={studentId} onValueChange={setStudentId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {s.class}</SelectItem>)}
+                {students.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {classLabel(s)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -1511,7 +1513,7 @@ function StudentParentDashboard({
           <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">
             {role === "parent" ? `${student.name}'s Progress` : `Hi, ${student.name.split(" ")[0]} 👋`}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Class {student.class} · Showing what the teacher has recorded</p>
+          <p className="mt-1 text-sm text-slate-500">Class {classLabel(student)} · Showing what the teacher has recorded</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {role === "parent" && (
