@@ -410,6 +410,8 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
+  const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
+  const [term, setTerm] = useState<Term>("Term 1");
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
@@ -474,7 +476,7 @@ function App() {
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {role === "teacher" ? (
-          <TeacherDashboard userName={userName} students={students} setStudents={setStudents} />
+          <TeacherDashboard userName={userName} students={students} setStudents={setStudents} academicYear={academicYear} setAcademicYear={setAcademicYear} term={term} setTerm={setTerm} />
         ) : (
           <StudentParentDashboard
             role={role!}
