@@ -71,23 +71,41 @@ type Role = "teacher" | "student" | "parent";
 const SUBJECTS = ["Math", "Science", "English", "History"] as const;
 type Subject = typeof SUBJECTS[number];
 
+const LEVELS = [
+  "Basic 1", "Basic 2", "Basic 3", "Basic 4", "Basic 5", "Basic 6",
+  "JHS 1", "JHS 2", "JHS 3",
+] as const;
+type Level = typeof LEVELS[number];
+
+const STREAMS = ["A", "B", "Unique", "Gold", "Silver"] as const;
+type Stream = typeof STREAMS[number];
+
+const TERMS = ["Term 1", "Term 2", "Term 3"] as const;
+type Term = typeof TERMS[number];
+
+const ACADEMIC_YEARS = ["2024/2025", "2025/2026", "2026/2027"] as const;
+type AcademicYear = typeof ACADEMIC_YEARS[number];
+
 type Student = {
   id: number;
   name: string;
-  class: string;
+  level: Level;
+  stream: Stream;
   grades: Record<Subject, number>;
   attendance: number;
   participation: Record<Subject, number>;
   remarks: Record<Subject, string>;
 };
 
+const classLabel = (s: Pick<Student, "level" | "stream">) => `${s.level} ${s.stream}`;
+
 const INITIAL_STUDENTS: Student[] = [
-  { id: 1, name: "Amara Okafor", class: "10-A", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
-  { id: 2, name: "Liam Chen", class: "10-A", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
-  { id: 3, name: "Sofia Martinez", class: "10-B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
-  { id: 4, name: "Noah Patel", class: "10-B", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
-  { id: 5, name: "Zara Ahmed", class: "10-A", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
-  { id: 6, name: "Ethan Brooks", class: "10-B", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
+  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
+  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
+  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
+  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
+  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
+  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
 ];
 
 const TERM_TREND = [
