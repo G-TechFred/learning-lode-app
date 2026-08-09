@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import splashBg from "@/assets/splash-bg.jpg";
 import {
   Users,
@@ -20,7 +20,6 @@ import {
   HandMetal,
   MessageSquare,
   Settings,
-  Mail,
 } from "lucide-react";
 import {
   LineChart,
@@ -53,6 +52,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, type Profile } from "@/lib/gtech-auth";
+import { savePerformance, totalScore } from "@/lib/performance";
+import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -206,25 +208,6 @@ const TEACHER_REMARKS = {
     "Behavior concerns are hindering academic progress.",
   ],
 };
-
-function handleGmailLogin(onSuccess: (firstName: string) => void) {
-  // Simulate Gmail login - In production, use @react-oauth/google
-  // For now, we'll create a realistic demo
-  const gmailAccounts = [
-    { name: "John Smith", email: "john.smith@gmail.com" },
-    { name: "Sarah Johnson", email: "sarah.johnson@gmail.com" },
-    { name: "Michael Brown", email: "michael.brown@gmail.com" },
-    { name: "Emily Davis", email: "emily.davis@gmail.com" },
-    { name: "James Wilson", email: "james.wilson@gmail.com" },
-  ];
-
-  // Pick a random account to simulate different users
-  const account = gmailAccounts[Math.floor(Math.random() * gmailAccounts.length)];
-  const firstName = account.name.split(" ")[0];
-
-  toast.success(`Welcome, ${firstName}! Logged in with ${account.email}`);
-  onSuccess(firstName);
-}
 
 function ForgotPasswordPage({ role, onBack, onSubmit }: { role: Role; onBack: () => void; onSubmit: (email: string) => void }) {
   const theme = ROLE_THEME[role];
@@ -412,6 +395,38 @@ function App() {
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
   const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
   const [term, setTerm] = useState<Term>("Term 1");
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const syncedRef = useRef<string>("");
+
+  // Teachers: persist recorded grades/attendance/participation to the database
+  // so student and parent portals receive them live.
+  useEffect(() => {
+    if (profile?.role !== "teacher") return;
+    const snapshot = JSON.stringify({ students, term, academicYear });
+    if (syncedRef.current === "") {
+      syncedRef.current = snapshot;
+      return;
+    }
+    if (syncedRef.current === snapshot) return;
+    syncedRef.current = snapshot;
+
+    const rows = students.flatMap((s) =>
+      SUBJECTS.map((subject) => ({
+        student_id: s.id,
+        subject,
+        class_score: s.grades[subject],
+        exam_score: s.grades[subject],
+        attendance: s.attendance,
+        participation: s.participation[subject],
+        remark: s.remarks[subject],
+        term,
+        academic_year: academicYear,
+      })),
+    );
+    savePerformance(rows).catch((e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Could not save performance records");
+    });
+  }, [students, term, academicYear, profile]);
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
@@ -456,8 +471,10 @@ function App() {
         onBack={() => setPendingRole(null)}
         onSignUpClick={() => setIsSignUp(!isSignUp)}
         onForgotPassword={() => setAuthScreen("forgot-password")}
-        onSuccess={(firstName) => {
+        onSuccess={(firstName, signedInProfile) => {
           setUserName(firstName);
+          setProfile(signedInProfile);
+          if (signedInProfile?.student_id != null) setSelectedStudentId(signedInProfile.student_id);
           setRole(pendingRole);
           setPendingRole(null);
           setIsSignUp(false);
@@ -469,7 +486,15 @@ function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <NavBar
         role={role!}
-        setRole={(r) => { setRole(r); if (!r) setPendingRole(null); }}
+        setRole={(r) => {
+          setRole(r);
+          if (!r) {
+            setPendingRole(null);
+            setProfile(null);
+            syncedRef.current = "";
+            void authSignOut();
+          }
+        }}
         students={students}
         onSelectStudent={(id) => setSelectedStudentId(id)}
         onNotificationClick={() => setShowNotifications(true)}
@@ -483,7 +508,13 @@ function App() {
             students={students}
             selectedStudentId={selectedStudentId}
             setSelectedStudentId={setSelectedStudentId}
-            onBack={() => setRole(null)}
+            term={term}
+            academicYear={academicYear}
+            onBack={() => {
+              setRole(null);
+              setProfile(null);
+              void authSignOut();
+            }}
           />
         )}
       </main>
@@ -524,7 +555,7 @@ function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" |
   return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
 }
 
-function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
+function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [fullName, setFullName] = useState("");
@@ -533,6 +564,7 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const strength = passwordStrength(password);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -541,16 +573,50 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
     ? fullName.trim().length > 1 && school.trim().length > 1 && emailValid && strength.valid && passwordsMatch
     : school.trim().length > 1 && emailValid && strength.valid;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) {
-      toast.error("Please complete all fields correctly.");
+    if (!canSubmit || submitting) {
+      if (!canSubmit) toast.error("Please complete all fields correctly.");
       return;
     }
-    const firstName = isSignUp ? fullName.split(" ")[0] : "User";
-    const action = isSignUp ? "Account created" : "Welcome";
-    toast.success(`${action}, ${firstName}!`);
-    onSuccess(firstName);
+    setSubmitting(true);
+    try {
+      if (isSignUp) {
+        const { profile, needsEmailConfirmation } = await signUpWhitelisted({
+          email,
+          password,
+          fullName,
+          schoolName: school,
+        });
+        if (needsEmailConfirmation) {
+          toast.success("Account created. Check your email to confirm, then sign in.");
+          return;
+        }
+        if (profile && profile.role !== role) {
+          await authSignOut();
+          toast.error(`This email is authorized as a ${profile.role}, not a ${role}.`);
+          return;
+        }
+        const firstName = fullName.trim().split(" ")[0];
+        toast.success(`Account created, ${firstName}!`);
+        onSuccess(firstName, profile);
+        return;
+      }
+
+      const profile = await signInWhitelisted({ email, password, schoolName: school });
+      if (profile.role !== role) {
+        await authSignOut();
+        toast.error(`This email is authorized as a ${profile.role}, not a ${role}.`);
+        return;
+      }
+      const firstName = (profile.full_name || email).split(" ")[0];
+      toast.success(`Welcome, ${firstName}!`);
+      onSuccess(firstName, profile);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Authentication failed.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -662,25 +728,13 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
                   )}
                 </div>
               )}
-              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
-                <UserPlus className="mr-2 h-4 w-4" /> {isSignUp ? "Create Account" : "Sign in"}
+              <Button type="submit" disabled={!canSubmit || submitting} className={`w-full ${theme.accent} text-white`}>
+                <UserPlus className="mr-2 h-4 w-4" /> {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign in"}
               </Button>
             </form>
-            <div className="relative mt-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-500">Or continue with</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleGmailLogin(onSuccess)}
-              className="w-full mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              <Mail className="h-4 w-4" /> Gmail
-            </button>
+            <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              Access is invite-only: only emails approved by the school can sign in.
+            </p>
             <div className="mt-4 text-center text-sm text-slate-600">
               {isSignUp ? "Already have an account?" : "Don't have an account?"} {" "}
               <button
@@ -1524,15 +1578,40 @@ function StudentParentDashboard({
   students,
   selectedStudentId,
   setSelectedStudentId,
+  term,
+  academicYear,
   onBack,
 }: {
   role: Role;
   students: Student[];
   selectedStudentId: number;
   setSelectedStudentId: (id: number) => void;
+  term: Term;
+  academicYear: AcademicYear;
   onBack: () => void;
 }) {
-  const student = students.find((s) => s.id === selectedStudentId) ?? students[0];
+  const base = students.find((s) => s.id === selectedStudentId) ?? students[0];
+
+  // Live teacher-recorded data — updates instantly, no refresh needed.
+  const { records, loading } = useRealtimePerformance(base?.id ?? null, term, academicYear);
+
+  const student = useMemo<Student>(() => {
+    if (records.length === 0) return base;
+    const grades = { ...base.grades };
+    const participation = { ...base.participation };
+    const remarks = { ...base.remarks };
+    let attendance = base.attendance;
+    for (const r of records) {
+      if (!(SUBJECTS as readonly string[]).includes(r.subject)) continue;
+      const subject = r.subject as Subject;
+      grades[subject] = totalScore(r);
+      participation[subject] = r.participation;
+      remarks[subject] = r.remark;
+      attendance = r.attendance;
+    }
+    return { ...base, grades, participation, remarks, attendance };
+  }, [base, records]);
+
   const gpa = overall(student);
   const present = Math.round((student.attendance / 100) * 180);
   const absent = 180 - present;
@@ -1566,6 +1645,9 @@ function StudentParentDashboard({
           )}
           <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">GPA {(gpa / 25).toFixed(2)}</Badge>
           <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{student.attendance}% attendance</Badge>
+          <Badge variant="outline" className={loading ? "border-slate-200 bg-slate-50 text-slate-500" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>
+            {loading ? "Syncing..." : "Live"} · {term}
+          </Badge>
         </div>
       </div>
 
