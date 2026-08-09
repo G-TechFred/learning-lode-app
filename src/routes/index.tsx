@@ -1645,6 +1645,9 @@ function StudentParentDashboard({
           )}
           <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700">GPA {(gpa / 25).toFixed(2)}</Badge>
           <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{student.attendance}% attendance</Badge>
+          <Badge variant="outline" className={loading ? "border-slate-200 bg-slate-50 text-slate-500" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>
+            {loading ? "Syncing..." : "Live"} · {term}
+          </Badge>
         </div>
       </div>
 
