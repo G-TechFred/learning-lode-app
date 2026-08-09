@@ -1,0 +1,135 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export type AppRole = "teacher" | "parent" | "student";
+
+export type Profile = {
+  id: string;
+  email: string;
+  full_name: string;
+  school_name: string;
+  role: AppRole;
+  student_id: number | null;
+};
+
+const WHITELIST_MESSAGE =
+  "This email is not on the school's authorized users list. Ask the school administrator to add you.";
+
+function isWhitelistError(message: string | undefined | null) {
+  if (!message) return false;
+  return message.includes("ACCESS_DENIED") || message.toLowerCase().includes("authorized users list");
+}
+
+/** Fetch the signed-in user's profile (role + linked student). */
+export async function fetchProfile(): Promise<Profile | null> {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, school_name, role, student_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return (data as Profile | null) ?? null;
+}
+
+/**
+ * Sign up. The database rejects any email that is not on the
+ * `authorized_users` whitelist, so external people cannot register.
+ */
+export async function signUpWhitelisted(params: {
+  email: string;
+  password: string;
+  fullName: string;
+  schoolName: string;
+}): Promise<{ profile: Profile | null; needsEmailConfirmation: boolean }> {
+  const email = params.email.trim().toLowerCase();
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: params.password,
+    options: {
+      emailRedirectTo: window.location.origin,
+      data: { full_name: params.fullName, school_name: params.schoolName },
+    },
+  });
+  if (error) throw new Error(error.message);
+  if (!data.user) throw new Error("Sign-up failed. Please try again.");
+
+  // No session yet (email confirmation pending) — the profile row is created
+  // on first successful sign-in instead.
+  if (!data.session) return { profile: null, needsEmailConfirmation: true };
+
+  const profile = await ensureProfile({
+    userId: data.user.id,
+    email,
+    fullName: params.fullName,
+    schoolName: params.schoolName,
+  });
+  return { profile, needsEmailConfirmation: false };
+}
+
+/** Sign in and return the whitelisted profile. */
+export async function signInWhitelisted(params: {
+  email: string;
+  password: string;
+  schoolName: string;
+}): Promise<Profile> {
+  const email = params.email.trim().toLowerCase();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: params.password,
+  });
+  if (error) throw new Error(error.message);
+  if (!data.user) throw new Error("Sign-in failed. Please try again.");
+
+  const profile = await ensureProfile({
+    userId: data.user.id,
+    email,
+    fullName: (data.user.user_metadata?.["full_name"] as string | undefined) ?? email.split("@")[0],
+    schoolName: params.schoolName,
+  });
+  if (!profile) throw new Error(WHITELIST_MESSAGE);
+  return profile;
+}
+
+/**
+ * Creates the profile row if missing. The `profiles_enforce_whitelist`
+ * trigger blocks the insert (and assigns the correct role + student link)
+ * when the email is not whitelisted.
+ */
+async function ensureProfile(params: {
+  userId: string;
+  email: string;
+  fullName: string;
+  schoolName: string;
+}): Promise<Profile> {
+  const existing = await fetchProfile();
+  if (existing) return existing;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .insert({
+      id: params.userId,
+      email: params.email,
+      full_name: params.fullName,
+      school_name: params.schoolName,
+      // Overwritten by the whitelist trigger with the authorized values.
+      role: "student",
+    })
+    .select("id, email, full_name, school_name, role, student_id")
+    .single();
+
+  if (error) {
+    await supabase.auth.signOut();
+    throw new Error(isWhitelistError(error.message) ? WHITELIST_MESSAGE : error.message);
+  }
+  return data as Profile;
+}
+
+export async function signOut() {
+  await supabase.auth.signOut();
+}
