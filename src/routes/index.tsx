@@ -52,9 +52,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, type Profile } from "@/lib/gtech-auth";
+import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, requestPasswordReset, type Profile } from "@/lib/gtech-auth";
 import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
+import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { SettingsPanel } from "@/components/SettingsPanel";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -209,23 +213,44 @@ const TEACHER_REMARKS = {
   ],
 };
 
-function ForgotPasswordPage({ role, onBack, onSubmit }: { role: Role; onBack: () => void; onSubmit: (email: string) => void }) {
+function ForgotPasswordPage({ role, onBack }: { role: Role; onBack: () => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [school, setSchool] = useState("");
   const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const canSubmit = school.trim().length > 1 && emailValid;
+  const canSubmit = school.trim().length > 1 && emailValid && !sending;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) {
-      toast.error("Please enter valid school name and email.");
+      toast.error("Please enter a valid school name and email.");
       return;
     }
-    onSubmit(email);
+    setSending(true);
+    try {
+      await requestPasswordReset(email);
+      setSent(true);
+      notify({
+        title: "Password reset link sent",
+        body: `We emailed a reset link to ${email.trim().toLowerCase()}.`,
+        kind: "success",
+        hint: "The link expires shortly — open it on this device to set a new password.",
+      });
+    } catch (err) {
+      notify({
+        title: "Could not send reset link",
+        body: err instanceof Error ? err.message : "Please try again in a moment.",
+        kind: "error",
+      });
+    } finally {
+      setSending(false);
+    }
   };
+
 
   return (
     <div className={`relative min-h-screen ${theme.bg} text-white`}>
@@ -249,133 +274,48 @@ function ForgotPasswordPage({ role, onBack, onSubmit }: { role: Role; onBack: ()
             <CardDescription>We'll send you a verification link via email.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="school-forgot" className="text-slate-700">School Name</Label>
-                <Input id="school-forgot" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g. Greenfield High" className={theme.ring} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email-forgot" className="text-slate-700">Email Address</Label>
-                <Input id="email-forgot" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" className={theme.ring} />
-              </div>
-              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
-                Send Verification Link
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function ResetPasswordPage({ role, email, onBack, onSuccess }: { role: Role; email: string; onBack: () => void; onSuccess: () => void }) {
-  const theme = ROLE_THEME[role];
-  const Icon = theme.icon;
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const strength = passwordStrength(newPassword);
-
-  const passwordsMatch = newPassword === confirmPassword && newPassword.length > 0;
-  const canSubmit = strength.valid && passwordsMatch;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) {
-      toast.error("Please complete all fields correctly.");
-      return;
-    }
-    onSuccess();
-  };
-
-  return (
-    <div className={`relative min-h-screen ${theme.bg} text-white`}>
-      <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_15%_20%,#fff_0,transparent_35%),radial-gradient(circle_at_85%_75%,#fff_0,transparent_35%)]" />
-      <button onClick={onBack} className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 text-sm text-white/70 hover:text-white sm:left-6 sm:top-6">
-        <ChevronRight className="h-4 w-4 rotate-180" /> Back
-      </button>
-      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
-        <div className="mb-8 max-w-md text-center lg:mb-0 lg:flex-1 lg:text-left">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
-            <Icon className="h-7 w-7" />
-          </div>
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-white/60">{theme.tag}</p>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Create New Password</h1>
-          <p className="mt-3 text-sm text-white/70 sm:text-base">Verification successful. Enter your new password for <span className="font-medium">{email}</span></p>
-        </div>
-
-        <Card className="w-full max-w-md border-0 shadow-2xl lg:flex-1">
-          <CardHeader>
-            <CardTitle className="text-xl text-slate-900">Reset Password</CardTitle>
-            <CardDescription>Enter and confirm your new password.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="new-password" className="text-slate-700">New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="new-password"
-                    type={showPw ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value.slice(0, 15))}
-                    placeholder="10–15 chars, include a special char"
-                    maxLength={15}
-                    className={`pr-16 ${theme.ring}`}
-                  />
-                  <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute inset-y-0 right-2 my-auto h-7 rounded px-2 text-xs font-medium text-slate-500 hover:bg-slate-100">
-                    {showPw ? "Hide" : "Show"}
-                  </button>
+            {sent ? (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <p className="font-semibold">Check your inbox</p>
+                  <p className="mt-1">
+                    We sent a password reset link to <span className="font-medium">{email.trim().toLowerCase()}</span>.
+                    Open it to choose a new password.
+                  </p>
                 </div>
-                {newPassword.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3].map((i) => (
-                        <span key={i} className={`h-1.5 flex-1 rounded-full transition ${i < strength.score ? strength.color : "bg-slate-200"}`} />
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={`font-semibold ${
-                        strength.label === "Weak" ? "text-rose-600" :
-                        strength.label === "Strong" ? "text-amber-600" :
-                        strength.label === "Stronger" ? "text-indigo-600" :
-                        strength.label === "Better" ? "text-emerald-600" : "text-slate-500"
-                      }`}>
-                        {strength.label}
-                      </span>
-                      <span className="text-slate-500">{newPassword.length}/15</span>
-                    </div>
-                    {strength.issues.length > 0 && (
-                      <ul className="space-y-0.5 text-xs text-slate-500">
-                        {strength.issues.map((i) => (
-                          <li key={i}>• {i}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
+                <p className="text-xs text-slate-500">
+                  Nothing yet? Check your spam folder, or confirm with your school administrator that this email is on the
+                  authorized users list.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setSent(false)}>
+                    Use another email
+                  </Button>
+                  <Button className={`flex-1 ${theme.accent} text-white`} onClick={onBack}>
+                    Back to sign in
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirm-password-reset" className="text-slate-700">Confirm Password</Label>
-                <Input
-                  id="confirm-password-reset"
-                  type={showPw ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value.slice(0, 15))}
-                  placeholder="Re-enter your password"
-                  maxLength={15}
-                  className={theme.ring}
-                />
-                {confirmPassword && newPassword !== confirmPassword && (
-                  <p className="text-xs text-rose-600">Passwords do not match</p>
-                )}
-              </div>
-              <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
-                Reset Password
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="school-forgot" className="text-slate-700">School Name</Label>
+                  <Input id="school-forgot" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g. Greenfield High" className={theme.ring} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email-forgot" className="text-slate-700">Email Address</Label>
+                  <Input id="email-forgot" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" className={theme.ring} />
+                </div>
+                <Button type="submit" disabled={!canSubmit} className={`w-full ${theme.accent} text-white`}>
+                  {sending ? "Sending…" : "Send Reset Link"}
+                </Button>
+                <button type="button" onClick={onBack} className="w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700">
+                  Back to sign in
+                </button>
+              </form>
+            )}
           </CardContent>
+
         </Card>
       </div>
     </div>
@@ -389,7 +329,8 @@ function App() {
   const [splashDone, setSplashDone] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
-  const [resetEmail, setResetEmail] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
@@ -397,6 +338,7 @@ function App() {
   const [term, setTerm] = useState<Term>("Term 1");
   const [profile, setProfile] = useState<Profile | null>(null);
   const syncedRef = useRef<string>("");
+  const { unread } = useNotifications();
 
   // Teachers: persist recorded grades/attendance/participation to the database
   // so student and parent portals receive them live.
@@ -423,46 +365,66 @@ function App() {
         academic_year: academicYear,
       })),
     );
-    savePerformance(rows).catch((e: unknown) => {
-      toast.error(e instanceof Error ? e.message : "Could not save performance records");
-    });
+    savePerformance(rows)
+      .then(() => {
+        notify({
+          title: "Results published",
+          body: `${term}, ${academicYear} records were saved and shared with students and parents.`,
+          kind: "success",
+          toast: false,
+        });
+      })
+      .catch((e: unknown) => {
+        notify({
+          title: "Could not save performance records",
+          body: e instanceof Error ? e.message : "Please check your connection and try again.",
+          kind: "error",
+        });
+      });
   }, [students, term, academicYear, profile]);
+
+  // Advisories the user should take note of, raised once per situation.
+  useEffect(() => {
+    if (!role) return;
+    notifyOnce(`term-${term}-${academicYear}-${role}`, {
+      title: `Active session: ${term}, ${academicYear}`,
+      body: "All entries and report cards apply to this term until you change it.",
+      kind: "info",
+      hint: "Switch the term from the Academic Session card before entering a new term's results.",
+      toast: false,
+    });
+
+    if (role === "teacher") {
+      const risk = students.filter((s) => statusOf(s) === "at-risk");
+      if (risk.length > 0) {
+        notifyOnce(`risk-${term}-${academicYear}-${risk.map((s) => s.id).join(",")}`, {
+          title: `${risk.length} student${risk.length > 1 ? "s" : ""} need attention`,
+          body: risk.map((s) => `${s.name} (${classLabel(s)})`).join(", "),
+          kind: "warning",
+          hint: "Low averages or attendance below 85% — consider remarks and parent follow-up.",
+          toast: false,
+        });
+      }
+    } else {
+      const me = students.find((s) => s.id === selectedStudentId);
+      if (me && me.attendance < 85) {
+        notifyOnce(`att-${me.id}-${term}-${academicYear}`, {
+          title: "Attendance below the school threshold",
+          body: `${me.name} is at ${me.attendance}% attendance this term.`,
+          kind: "warning",
+          hint: "Attendance under 85% can affect end-of-term promotion.",
+          toast: false,
+        });
+      }
+    }
+  }, [role, term, academicYear, students, selectedStudentId]);
+
 
   if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
   if (!role && !pendingRole) return <Landing onPick={setPendingRole} />;
   if (!role && pendingRole) {
     if (authScreen === "forgot-password") {
-      return (
-        <ForgotPasswordPage
-          role={pendingRole}
-          onBack={() => setAuthScreen("login")}
-          onSubmit={(email) => {
-            setResetEmail(email);
-            setAuthScreen("reset-password");
-            toast.success("Verification email sent! Simulating verification...");
-          }}
-        />
-      );
-    }
-    if (authScreen === "reset-password") {
-      return (
-        <ResetPasswordPage
-          role={pendingRole}
-          email={resetEmail}
-          onBack={() => {
-            setAuthScreen("login");
-            setResetEmail("");
-          }}
-          onSuccess={() => {
-            setRole(pendingRole);
-            setPendingRole(null);
-            setAuthScreen("login");
-            setIsSignUp(false);
-            setResetEmail("");
-            toast.success("Password reset successfully!");
-          }}
-        />
-      );
+      return <ForgotPasswordPage role={pendingRole} onBack={() => setAuthScreen("login")} />;
     }
     return (
       <LoginPage
@@ -478,6 +440,28 @@ function App() {
           setRole(pendingRole);
           setPendingRole(null);
           setIsSignUp(false);
+          notify({
+            title: `Signed in as ${pendingRole}`,
+            body: `Welcome back, ${firstName}. ${term}, ${academicYear} is the active session.`,
+            kind: "success",
+            toast: false,
+          });
+          if (pendingRole === "teacher") {
+            notify({
+              title: "Record this term's assessments",
+              body: "Use Enter Performance to add class scores, exam scores, attendance and remarks.",
+              kind: "action",
+              hint: "Saved results reach students and parents instantly.",
+              toast: false,
+            });
+          } else {
+            notify({
+              title: "Results update live",
+              body: "This page refreshes automatically whenever a teacher saves new results.",
+              kind: "info",
+              toast: false,
+            });
+          }
         }}
       />
     );
@@ -493,11 +477,14 @@ function App() {
             setProfile(null);
             syncedRef.current = "";
             void authSignOut();
+            notify({ title: "Signed out", body: "Your session was closed securely.", kind: "info", toast: false });
           }
         }}
         students={students}
         onSelectStudent={(id) => setSelectedStudentId(id)}
         onNotificationClick={() => setShowNotifications(true)}
+        onOpenSettings={() => setShowSettings(true)}
+        unread={unread}
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {role === "teacher" ? (
@@ -518,20 +505,26 @@ function App() {
           />
         )}
       </main>
-      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notifications</DialogTitle>
-          </DialogHeader>
-          <div className="py-8 text-center text-slate-500">
-            <Bell className="mx-auto h-12 w-12 mb-2 opacity-50" />
-            <p className="text-sm">No new notifications</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <NotificationCenter open={showNotifications} onOpenChange={setShowNotifications} />
+      <SettingsPanel
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        profile={{
+          fullName: profile?.full_name || userName,
+          email: profile?.email ?? "",
+          school: profile?.school_name ?? "",
+          role: profile?.role ?? role!,
+          studentId: profile?.student_id ?? null,
+        }}
+        onProfileSaved={(name) => {
+          setUserName(name.split(" ")[0]);
+          setProfile((p) => (p ? { ...p, full_name: name } : p));
+        }}
+      />
     </div>
   );
 }
+
 
 function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
   const issues: string[] = [];
@@ -852,13 +845,18 @@ function NavBar({
   students,
   onSelectStudent,
   onNotificationClick,
+  onOpenSettings,
+  unread,
 }: {
   role: Role;
   setRole: (r: Role | null) => void;
   students: Student[];
   onSelectStudent: (id: number) => void;
   onNotificationClick: () => void;
+  onOpenSettings: (tab: SettingsTab) => void;
+  unread: number;
 }) {
+
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
@@ -941,23 +939,23 @@ function NavBar({
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Settings</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenSettings("profile")}>
                 <span>Profile Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenSettings("security")}>
                 <span>Change Password</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenSettings("alerts")}>
                 <span>Notification Preferences</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenSettings("privacy")}>
                 <span>Account Privacy</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <span>Help & Support</span>
+              <DropdownMenuItem onClick={() => onOpenSettings("about")}>
+                <span>Help &amp; Support</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenSettings("about")}>
                 <span>About</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -966,10 +964,15 @@ function NavBar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button onClick={onNotificationClick} className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="Notifications">
+          <button onClick={onNotificationClick} className="relative grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`}>
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
           </button>
+
         </div>
       </div>
     </header>
