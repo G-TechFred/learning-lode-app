@@ -133,3 +133,18 @@ async function ensureProfile(params: {
 export async function signOut() {
   await supabase.auth.signOut();
 }
+
+/** Send a password-reset link to a whitelisted email. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const clean = email.trim().toLowerCase();
+  const { error } = await supabase.auth.resetPasswordForEmail(clean, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Set a new password for the currently recovering/signed-in user. */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
+}
