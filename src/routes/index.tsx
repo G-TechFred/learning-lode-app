@@ -57,7 +57,7 @@ import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { SettingsPanel } from "@/components/SettingsPanel";
+import { SettingsPanel, type SettingsTab } from "@/components/SettingsPanel";
 
 
 export const Route = createFileRoute("/")({
