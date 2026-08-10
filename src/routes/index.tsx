@@ -483,7 +483,7 @@ function App() {
         students={students}
         onSelectStudent={(id) => setSelectedStudentId(id)}
         onNotificationClick={() => setShowNotifications(true)}
-        onOpenSettings={() => setShowSettings(true)}
+        onOpenSettings={(t) => { setSettingsTab(t); setShowSettings(true); }}
         unread={unread}
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
