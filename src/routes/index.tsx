@@ -330,6 +330,7 @@ function App() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("profile");
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
@@ -516,6 +517,8 @@ function App() {
           role: profile?.role ?? role!,
           studentId: profile?.student_id ?? null,
         }}
+        tab={settingsTab}
+        onTabChange={setSettingsTab}
         onProfileSaved={(name) => {
           setUserName(name.split(" ")[0]);
           setProfile((p) => (p ? { ...p, full_name: name } : p));
@@ -945,7 +948,7 @@ function NavBar({
               <DropdownMenuItem onClick={() => onOpenSettings("security")}>
                 <span>Change Password</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onOpenSettings("alerts")}>
+              <DropdownMenuItem onClick={() => onOpenSettings("notifications")}>
                 <span>Notification Preferences</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onOpenSettings("privacy")}>
