@@ -551,7 +551,7 @@ function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" |
   return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
 }
 
-function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
+function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword, onAwaitingConfirmation }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void; onAwaitingConfirmation: (email: string) => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [fullName, setFullName] = useState("");
