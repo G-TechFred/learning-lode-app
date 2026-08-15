@@ -44,14 +44,20 @@ export async function signUpWhitelisted(params: {
   password: string;
   fullName: string;
   schoolName: string;
+  /** Destination portal chosen before sign-up; restored after email confirmation. */
+  role?: AppRole;
 }): Promise<{ profile: Profile | null; needsEmailConfirmation: boolean }> {
   const email = params.email.trim().toLowerCase();
+
+  const redirectTo = params.role
+    ? `${window.location.origin}/?role=${params.role}`
+    : window.location.origin;
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password: params.password,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: redirectTo,
       data: { full_name: params.fullName, school_name: params.schoolName },
     },
   });
