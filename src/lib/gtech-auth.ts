@@ -55,7 +55,9 @@ export async function signUpWhitelisted(params: {
       data: { full_name: params.fullName, school_name: params.schoolName },
     },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(isWhitelistError(error.message) ? WHITELIST_MESSAGE : error.message);
+  }
   if (!data.user) throw new Error("Sign-up failed. Please try again.");
 
   // No session yet (email confirmation pending) — the profile row is created
