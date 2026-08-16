@@ -14,122 +14,16 @@ export type Database = {
   }
   public: {
     Tables: {
-      authorized_users: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          student_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          student_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          student_id?: number | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          full_name: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          school_name: string
-          student_id: number | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          full_name?: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          school_name?: string
-          student_id?: number | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          full_name?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          school_name?: string
-          student_id?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      student_performance: {
-        Row: {
-          academic_year: string
-          attendance: number
-          class_score: number
-          exam_score: number
-          id: string
-          participation: number
-          remark: string
-          student_id: number
-          subject: string
-          teacher_id: string | null
-          term: string
-          updated_at: string
-        }
-        Insert: {
-          academic_year: string
-          attendance?: number
-          class_score?: number
-          exam_score?: number
-          id?: string
-          participation?: number
-          remark?: string
-          student_id: number
-          subject: string
-          teacher_id?: string | null
-          term: string
-          updated_at?: string
-        }
-        Update: {
-          academic_year?: string
-          attendance?: number
-          class_score?: number
-          exam_score?: number
-          id?: string
-          participation?: number
-          remark?: string
-          student_id?: number
-          subject?: string
-          teacher_id?: string | null
-          term?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      current_app_role: {
-        Args: never
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      current_student_id: { Args: never; Returns: number }
-      is_email_authorized: { Args: { _email: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "teacher" | "parent" | "student"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -256,8 +150,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["teacher", "parent", "student"],
-    },
+    Enums: {},
   },
 } as const
