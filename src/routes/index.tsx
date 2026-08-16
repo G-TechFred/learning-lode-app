@@ -434,6 +434,15 @@ function App() {
         onBack={() => setPendingRole(null)}
         onSignUpClick={() => setIsSignUp(!isSignUp)}
         onForgotPassword={() => setAuthScreen("forgot-password")}
+        onAwaitingConfirmation={(email) => {
+          setIsSignUp(false);
+          notify({
+            title: "Confirm your email",
+            body: `We sent a confirmation link to ${email}. Once confirmed, you'll be taken straight to your ${pendingRole} portal.`,
+            kind: "info",
+          });
+          toast.success("Account created. Check your email to confirm, then sign in.");
+        }}
         onSuccess={(firstName, signedInProfile) => {
           setUserName(firstName);
           setProfile(signedInProfile);
@@ -583,9 +592,10 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
           password,
           fullName,
           schoolName: school,
+          role,
         });
         if (needsEmailConfirmation) {
-          toast.success("Account created. Check your email to confirm, then sign in.");
+          onAwaitingConfirmation(email.trim().toLowerCase());
           return;
         }
         if (profile && profile.role !== role) {
