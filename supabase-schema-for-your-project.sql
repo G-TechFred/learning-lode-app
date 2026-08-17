@@ -43,8 +43,11 @@ create table public.student_performance (
   term text not null,
   academic_year text not null,
   teacher_id uuid,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- required by the app's upsert (onConflict: student_id,subject,term,academic_year)
+  unique (student_id, subject, term, academic_year)
 );
+alter table public.student_performance replica identity full;
 grant select, insert, update, delete on public.student_performance to authenticated;
 grant all on public.student_performance to service_role;
 alter table public.student_performance enable row level security;
