@@ -13,11 +13,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const EXTERNAL_SUPABASE_URL =
   (import.meta.env["VITE_MY_SUPABASE_URL"] as string | undefined) ??
-  "https://YOUR-PROJECT-REF.supabase.co";
+  "https://npjkjdncirtycjvdkstf.supabase.co";
 
 export const EXTERNAL_SUPABASE_PUBLISHABLE_KEY =
   (import.meta.env["VITE_MY_SUPABASE_PUBLISHABLE_KEY"] as string | undefined) ??
-  "YOUR-PUBLISHABLE-OR-ANON-KEY";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wamtqZG5jaXJ0eWNqdmRrc3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjAxNDEsImV4cCI6MjA5MDQ5NjE0MX0.aqPFBBhtT7P0DmqMTo3-6Nsr00h0jEtAScIvh8oSPSc";
 
 export const isExternalSupabaseConfigured =
   !EXTERNAL_SUPABASE_URL.includes("YOUR-PROJECT-REF") &&
