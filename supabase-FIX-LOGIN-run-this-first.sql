@@ -1,5 +1,5 @@
 -- =====================================================================
--- G-TECH AUTOMATION — LOGIN / SIGN-UP REPAIR SCRIPT
+-- GODDY MONTESSORI SCHOOL — LOGIN / SIGN-UP REPAIR SCRIPT
 -- Run this in YOUR Supabase project: SQL Editor -> New query -> paste -> Run
 -- Then run supabase-schema-for-your-project.sql (the whole file).
 -- =====================================================================

@@ -1,5 +1,5 @@
 -- Run this ONCE in your own Supabase project (SQL Editor).
--- It recreates the G-TECH AUTOMATION schema that was removed from Lovable Cloud.
+-- It recreates the GODDY MONTESSORI SCHOOL schema that was removed from Lovable Cloud.
 
 create type public.app_role as enum ('teacher', 'parent', 'student');
 
