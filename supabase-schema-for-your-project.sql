@@ -145,3 +145,20 @@ insert into public.authorized_users (email, role, student_id) values
   ('student@gtech.school', 'student', 1),
   ('parent@gtech.school', 'parent', 1)
 on conflict (email) do nothing;
+
+-- 8. Password-reset email verification -------------------------------------------
+-- Rejects reset requests for emails that were never used to create an account.
+create or replace function public.email_is_registered(p_email text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from auth.users where lower(email) = lower(trim(p_email))
+  );
+$$;
+
+revoke all on function public.email_is_registered(text) from public;
+grant execute on function public.email_is_registered(text) to anon, authenticated;
