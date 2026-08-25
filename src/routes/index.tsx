@@ -816,9 +816,9 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#F68B1E]/30 bg-[#F68B1E]/10 px-4 py-1.5 text-xs font-medium backdrop-blur animate-magical-rise">
-            <Sparkles className="h-3.5 w-3.5 text-[#F68B1E]" />
             Student Performance Tracker
           </div>
+
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl animate-magical-rise" style={{ animationDelay: "120ms" }}>
             <span className="text-magical">G-TECH AUTOMATION</span>
           </h1>
