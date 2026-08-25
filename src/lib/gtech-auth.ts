@@ -91,8 +91,22 @@ export async function signInWhitelisted(params: {
     email,
     password: params.password,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("database error")) {
+      throw new Error(
+        "The database isn't set up yet, so no account could be created. Run supabase-FIX-LOGIN-run-this-first.sql then supabase-schema-for-your-project.sql in your Supabase SQL Editor.",
+      );
+    }
+    if (msg.includes("invalid login credentials")) {
+      throw new Error(
+        "No account matches this email and password. If you never completed sign-up, create the account first (or use Forgot password).",
+      );
+    }
+    throw new Error(error.message);
+  }
   if (!data.user) throw new Error("Sign-in failed. Please try again.");
+
 
   const profile = await ensureProfile({
     userId: data.user.id,
