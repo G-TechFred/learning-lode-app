@@ -63,9 +63,9 @@ import { SettingsPanel, type SettingsTab } from "@/components/SettingsPanel";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "G-TECH AUTOMATION — Student Performance Tracker" },
+      { title: "GODDY MONTESSORI SCHOOL — Student Performance Tracker" },
       { name: "description", content: "Modern dashboard for teachers, students and parents to track grades, attendance and progress in real time." },
-      { property: "og:title", content: "G-TECH AUTOMATION — Student Performance Tracker" },
+      { property: "og:title", content: "GODDY MONTESSORI SCHOOL — Student Performance Tracker" },
       { property: "og:description", content: "Real-time analytics for teachers, students and parents." },
     ],
   }),
@@ -784,7 +784,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
           <GraduationCap className="h-10 w-10 text-white" />
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          G-TECH AUTOMATION
+          GODDY MONTESSORI SCHOOL
         </h1>
         <p className="mt-3 text-sm font-medium uppercase tracking-[0.2em] text-indigo-200">
           Student Performance Tracker
@@ -820,7 +820,7 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl animate-magical-rise" style={{ animationDelay: "120ms" }}>
-            <span className="text-magical">G-TECH AUTOMATION</span>
+            <span className="text-magical">GODDY MONTESSORI SCHOOL</span>
           </h1>
           <p className="mt-4 text-base text-amber-100/80 sm:text-lg animate-magical-rise" style={{ animationDelay: "260ms" }}>
             Real-time grades, attendance, and teacher-entered insights for everyone in the classroom.
@@ -878,7 +878,7 @@ function NavBar({
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight">G-TECH AUTOMATION</p>
+            <p className="truncate text-sm font-bold tracking-tight">GODDY MONTESSORI SCHOOL</p>
             <p className="hidden text-xs text-slate-500 sm:block">Performance tracker</p>
           </div>
         </div>

@@ -14,9 +14,9 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Reset Password — G-TECH AUTOMATION" },
-      { name: "description", content: "Set a new password for your G-TECH AUTOMATION student performance tracker account." },
-      { property: "og:title", content: "Reset Password — G-TECH AUTOMATION" },
+      { title: "Reset Password — GODDY MONTESSORI SCHOOL" },
+      { name: "description", content: "Set a new password for your GODDY MONTESSORI SCHOOL student performance tracker account." },
+      { property: "og:title", content: "Reset Password — GODDY MONTESSORI SCHOOL" },
       { property: "og:description", content: "Securely choose a new password for your school account." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -95,7 +95,7 @@ function ResetPasswordRoute() {
             <GraduationCap className="h-7 w-7" />
           </div>
           <h1 className="text-3xl font-bold">Create a new password</h1>
-          <p className="mt-2 text-sm text-white/70">G-TECH AUTOMATION · Student Performance Tracker</p>
+          <p className="mt-2 text-sm text-white/70">GODDY MONTESSORI SCHOOL · Student Performance Tracker</p>
         </div>
 
         <Card className="border-0 shadow-2xl">
