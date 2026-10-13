@@ -586,37 +586,19 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
     }
     setSubmitting(true);
     try {
-      if (isSignUp) {
-        const { profile, needsEmailConfirmation } = await signUpWhitelisted({
-          email,
-          password,
-          fullName,
-          schoolName: school,
-          role,
-        });
-        if (needsEmailConfirmation) {
-          onAwaitingConfirmation(email.trim().toLowerCase());
-          return;
-        }
-        if (profile && profile.role !== role) {
-          await authSignOut();
-          toast.error(`This email is authorized as a ${profile.role}, not a ${role}.`);
-          return;
-        }
-        const firstName = fullName.trim().split(" ")[0];
-        toast.success(`Account created, ${firstName}!`);
-        onSuccess(firstName, profile);
-        return;
-      }
-
-      const profile = await signInWhitelisted({ email, password, schoolName: school });
-      if (profile.role !== role) {
-        await authSignOut();
-        toast.error(`This email is authorized as a ${profile.role}, not a ${role}.`);
-        return;
-      }
-      const firstName = (profile.full_name || email).split(" ")[0];
-      toast.success(`Welcome, ${firstName}!`);
+      // No authentication: any filled-in login opens the dashboard directly.
+      const cleanEmail = email.trim().toLowerCase();
+      const name = isSignUp && fullName.trim() ? fullName.trim() : cleanEmail.split("@")[0];
+      const profile: Profile = {
+        id: cleanEmail,
+        email: cleanEmail,
+        full_name: name,
+        school_name: school.trim(),
+        role,
+        student_id: null,
+      };
+      const firstName = name.split(" ")[0];
+      toast.success(isSignUp ? `Account created, ${firstName}!` : `Welcome, ${firstName}!`);
       onSuccess(firstName, profile);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed.");
