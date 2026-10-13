@@ -52,7 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, requestPasswordReset, type Profile } from "@/lib/gtech-auth";
+import { signOut as authSignOut, requestPasswordReset, type Profile } from "@/lib/gtech-auth";
 import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
