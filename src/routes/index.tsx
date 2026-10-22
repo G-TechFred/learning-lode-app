@@ -348,13 +348,14 @@ function App() {
       return;
     }
     let active = true;
+    const email = profile.email;
     const isTeacher = role === "teacher";
     workspaceRef.current = null;
     setStudents(INITIAL_STUDENTS);
-    (isTeacher ? loadTeacherWorkspace(profile.email, INITIAL_STUDENTS) : loadPublished(INITIAL_STUDENTS))
+    (isTeacher ? loadTeacherWorkspace(email, INITIAL_STUDENTS) : loadPublished(INITIAL_STUDENTS))
       .then((list) => {
         if (!active) return;
-        if (isTeacher) workspaceRef.current = { email: profile.email, students: list };
+        if (isTeacher) workspaceRef.current = { email, students: list };
         setStudents(list);
       })
       .catch((e: unknown) => {
