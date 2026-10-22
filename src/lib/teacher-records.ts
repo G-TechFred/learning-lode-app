@@ -1,43 +1,46 @@
 /**
- * Device-stored assessment records.
- * Each teacher has a private workspace (keyed by email) so entries never mix.
- * Every student a teacher changes is also copied to a shared "published" set,
- * which is what students and parents read. Latest teacher change wins.
+ * Online assessment records (Lovable Cloud, table teacher_records).
+ * Each teacher has a private workspace keyed by email so entries never mix.
+ * Students and parents read the most recently updated record per student.
  */
-const WORKSPACE_PREFIX = "gms-records:teacher:";
-const PUBLISHED_KEY = "gms-records:published";
+import { supabase } from "@/integrations/supabase/client";
 
-type Published<T> = Record<string, { student: T; by: string; at: number }>;
+type Row = { teacher_email: string; student_id: number; data: unknown; updated_at: string };
 
-function read<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
+export async function loadTeacherWorkspace<T extends { id: number }>(email: string, base: T[]): Promise<T[]> {
+  const { data, error } = await supabase
+    .from("teacher_records")
+    .select("student_id, data")
+    .eq("teacher_email", email.toLowerCase());
+  if (error) throw new Error(error.message);
+  const byId = new Map((data ?? []).map((r) => [r.student_id, r.data as T]));
+  return base.map((s) => byId.get(s.id) ?? s);
 }
 
-export function loadTeacherWorkspace<T>(email: string): T[] | null {
-  return read<T[]>(WORKSPACE_PREFIX + email.toLowerCase());
-}
-
-export function saveTeacherWorkspace<T extends { id: number }>(email: string, students: T[], previous: T[]) {
-  localStorage.setItem(WORKSPACE_PREFIX + email.toLowerCase(), JSON.stringify(students));
-  const published = read<Published<T>>(PUBLISHED_KEY) ?? {};
+export async function saveTeacherWorkspace<T extends { id: number }>(email: string, students: T[], previous: T[]) {
   const prevById = new Map(previous.map((s) => [s.id, JSON.stringify(s)]));
-  let changed = false;
-  for (const s of students) {
-    if (prevById.get(s.id) !== JSON.stringify(s)) {
-      published[String(s.id)] = { student: s, by: email.toLowerCase(), at: Date.now() };
-      changed = true;
-    }
-  }
-  if (changed) localStorage.setItem(PUBLISHED_KEY, JSON.stringify(published));
+  const changed = students.filter((s) => prevById.get(s.id) !== JSON.stringify(s));
+  if (changed.length === 0) return;
+  const { error } = await supabase.from("teacher_records").upsert(
+    changed.map((s) => ({
+      teacher_email: email.toLowerCase(),
+      student_id: s.id,
+      data: s as never,
+      updated_at: new Date().toISOString(),
+    })),
+    { onConflict: "teacher_email,student_id" },
+  );
+  if (error) throw new Error(error.message);
 }
 
-/** Students/parents: base roster overlaid with the latest teacher-published entries. */
-export function loadPublished<T extends { id: number }>(base: T[]): T[] {
-  const published = read<Published<T>>(PUBLISHED_KEY) ?? {};
-  return base.map((s) => published[String(s.id)]?.student ?? s);
+/** Students/parents: base roster overlaid with each student's latest teacher entry. */
+export async function loadPublished<T extends { id: number }>(base: T[]): Promise<T[]> {
+  const { data, error } = await supabase
+    .from("teacher_records")
+    .select("teacher_email, student_id, data, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const latest = new Map<number, T>();
+  for (const r of (data ?? []) as Row[]) if (!latest.has(r.student_id)) latest.set(r.student_id, r.data as T);
+  return base.map((s) => latest.get(s.id) ?? s);
 }

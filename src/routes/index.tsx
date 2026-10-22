@@ -347,22 +347,32 @@ function App() {
       setStudents(INITIAL_STUDENTS);
       return;
     }
-    if (role === "teacher") {
-      const own = loadTeacherWorkspace<Student>(profile.email) ?? INITIAL_STUDENTS;
-      workspaceRef.current = { email: profile.email, students: own };
-      setStudents(own);
-    } else {
-      workspaceRef.current = null;
-      setStudents(loadPublished(INITIAL_STUDENTS));
-    }
+    let active = true;
+    const email = profile.email;
+    const isTeacher = role === "teacher";
+    workspaceRef.current = null;
+    setStudents(INITIAL_STUDENTS);
+    (isTeacher ? loadTeacherWorkspace(email, INITIAL_STUDENTS) : loadPublished(INITIAL_STUDENTS))
+      .then((list) => {
+        if (!active) return;
+        if (isTeacher) workspaceRef.current = { email, students: list };
+        setStudents(list);
+      })
+      .catch((e: unknown) => {
+        notify({ title: "Could not load records", body: e instanceof Error ? e.message : "Check your connection.", kind: "error" });
+      });
+    return () => { active = false; };
   }, [role, profile?.email]);
 
   // Teachers: save every change to their own workspace and publish it.
   useEffect(() => {
     const ws = workspaceRef.current;
     if (role !== "teacher" || !ws || ws.students === students) return;
-    saveTeacherWorkspace(ws.email, students, ws.students);
+    const previous = ws.students;
     ws.students = students;
+    saveTeacherWorkspace(ws.email, students, previous).catch((e: unknown) => {
+      notify({ title: "Could not save records online", body: e instanceof Error ? e.message : "Check your connection and try again.", kind: "error" });
+    });
   }, [students, role]);
 
   // Advisories the user should take note of, raised once per situation.
