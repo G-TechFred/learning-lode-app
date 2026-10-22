@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { signOut as authSignOut, requestPasswordReset, type Profile } from "@/lib/gtech-auth";
+import { loadTeacherWorkspace, saveTeacherWorkspace, loadPublished } from "@/lib/teacher-records";
 import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
@@ -329,66 +330,40 @@ function App() {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
-  const loadedRef = useRef(false);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("gms-teacher-records");
-      if (raw) setStudents(JSON.parse(raw));
-    } catch { /* ignore */ }
-    loadedRef.current = true;
-  }, []);
-  useEffect(() => {
-    if (loadedRef.current) localStorage.setItem("gms-teacher-records", JSON.stringify(students));
-  }, [students]);
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
   const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
   const [term, setTerm] = useState<Term>("Term 1");
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
   const syncedRef = useRef<string>("");
   const { unread } = useNotifications();
 
-  // Teachers: persist recorded grades/attendance/participation to the database
-  // so student and parent portals receive them live.
+  // Load the right records for whoever signs in: a teacher's own workspace,
+  // or the latest teacher-published results for students and parents.
+  const workspaceRef = useRef<{ email: string; students: Student[] } | null>(null);
   useEffect(() => {
-    if (profile?.role !== "teacher") return;
-    const snapshot = JSON.stringify({ students, term, academicYear });
-    if (syncedRef.current === "") {
-      syncedRef.current = snapshot;
+    if (!role || !profile) {
+      workspaceRef.current = null;
+      setStudents(INITIAL_STUDENTS);
       return;
     }
-    if (syncedRef.current === snapshot) return;
-    syncedRef.current = snapshot;
+    if (role === "teacher") {
+      const own = loadTeacherWorkspace<Student>(profile.email) ?? INITIAL_STUDENTS;
+      workspaceRef.current = { email: profile.email, students: own };
+      setStudents(own);
+    } else {
+      workspaceRef.current = null;
+      setStudents(loadPublished(INITIAL_STUDENTS));
+    }
+  }, [role, profile?.email]);
 
-    const rows = students.flatMap((s) =>
-      SUBJECTS.map((subject) => ({
-        student_id: s.id,
-        subject,
-        class_score: s.grades[subject],
-        exam_score: s.grades[subject],
-        attendance: s.attendance,
-        participation: s.participation[subject],
-        remark: s.remarks[subject],
-        term,
-        academic_year: academicYear,
-      })),
-    );
-    savePerformance(rows)
-      .then(() => {
-        notify({
-          title: "Results published",
-          body: `${term}, ${academicYear} records were saved and shared with students and parents.`,
-          kind: "success",
-          toast: false,
-        });
-      })
-      .catch((e: unknown) => {
-        notify({
-          title: "Could not save performance records",
-          body: e instanceof Error ? e.message : "Please check your connection and try again.",
-          kind: "error",
-        });
-      });
-  }, [students, term, academicYear, profile]);
+  // Teachers: save every change to their own workspace and publish it.
+  useEffect(() => {
+    const ws = workspaceRef.current;
+    if (role !== "teacher" || !ws || ws.students === students) return;
+    saveTeacherWorkspace(ws.email, students, ws.students);
+    ws.students = students;
+  }, [students, role]);
 
   // Advisories the user should take note of, raised once per situation.
   useEffect(() => {
@@ -453,6 +428,7 @@ function App() {
           setUserName(firstName);
           setProfile(signedInProfile);
           if (signedInProfile?.student_id != null) setSelectedStudentId(signedInProfile.student_id);
+          setShowWelcome(true);
           setRole(pendingRole);
           setPendingRole(null);
           setIsSignUp(false);
@@ -503,7 +479,15 @@ function App() {
         unread={unread}
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {role === "teacher" ? (
+        {role === "teacher" && showWelcome ? (
+          <TeacherWelcome
+            name={profile?.full_name || userName}
+            email={profile?.email ?? ""}
+            school={profile?.school_name ?? ""}
+            students={students}
+            onContinue={() => setShowWelcome(false)}
+          />
+        ) : role === "teacher" ? (
           <TeacherDashboard userName={userName} students={students} setStudents={setStudents} academicYear={academicYear} setAcademicYear={setAcademicYear} term={term} setTerm={setTerm} />
         ) : (
           <StudentParentDashboard
@@ -543,6 +527,34 @@ function App() {
   );
 }
 
+
+function TeacherWelcome({ name, email, school, students, onContinue }: { name: string; email: string; school: string; students: Student[]; onContinue: () => void }) {
+  const entered = students.filter((s) => Object.values(s.grades).some((g) => g > 0) || s.attendance > 0).length;
+  const first = name.split(" ")[0] || "Teacher";
+  return (
+    <div className="mx-auto max-w-2xl py-10">
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-br from-orange-500 to-amber-500 p-8 text-white">
+          <p className="text-sm uppercase tracking-widest text-white/80">Your personal workspace</p>
+          <h1 className="mt-2 text-3xl font-bold">Welcome, {first}</h1>
+          <p className="mt-2 text-white/90">{school || "GODDY MONTESSORI SCHOOL"} · {email}</p>
+        </div>
+        <CardContent className="space-y-4 p-6">
+          <p className="text-slate-600">
+            This dashboard belongs only to you. Marks, attendance and remarks you enter here are kept separately from other
+            teachers and are saved even after you log out. Students and parents see your latest entries.
+          </p>
+          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+            {entered === 0
+              ? "You haven't entered any assessments yet. Start by opening Enter Performance."
+              : `You have saved assessments for ${entered} student${entered > 1 ? "s" : ""}.`}
+          </div>
+          <Button className="w-full" onClick={onContinue}>Open my dashboard</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
   const issues: string[] = [];
