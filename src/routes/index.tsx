@@ -106,20 +106,15 @@ type Student = {
 const classLabel = (s: Pick<Student, "level" | "stream">) => `${s.level} ${s.stream}`;
 
 const INITIAL_STUDENTS: Student[] = [
-  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
-  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
-  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
-  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
-  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
-  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
+  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
 ];
 
-const TERM_TREND = [
-  { term: "Term 1", avg: 78 },
-  { term: "Term 2", avg: 81 },
-  { term: "Midterm", avg: 83 },
-  { term: "Finals", avg: 86 },
-];
+const TERM_TREND: { term: string; avg: number }[] = [];
 
 function overall(s: Student) {
   const v = Object.values(s.grades);
@@ -334,6 +329,17 @@ function App() {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("gms-teacher-records");
+      if (raw) setStudents(JSON.parse(raw));
+    } catch { /* ignore */ }
+    loadedRef.current = true;
+  }, []);
+  useEffect(() => {
+    if (loadedRef.current) localStorage.setItem("gms-teacher-records", JSON.stringify(students));
+  }, [students]);
   const [selectedStudentId, setSelectedStudentId] = useState<number>(INITIAL_STUDENTS[0].id);
   const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
   const [term, setTerm] = useState<Term>("Term 1");
@@ -1734,7 +1740,7 @@ function StudentParentDashboard({
         </CardHeader>
         <CardContent className="h-64 pl-0">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={TERM_TREND.map((t) => ({ ...t, avg: t.avg + 5 }))}>
+            <LineChart data={TERM_TREND}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="term" stroke="#64748b" fontSize={12} />
               <YAxis domain={[60, 100]} stroke="#64748b" fontSize={12} />
