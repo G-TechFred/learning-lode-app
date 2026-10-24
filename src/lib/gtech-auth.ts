@@ -2,6 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "teacher" | "parent" | "student";
 
+const DEMO_ACCOUNT_ROLES: Record<string, AppRole> = {
+  "teacher@gtech.com": "teacher",
+  "student@gtech.com": "student",
+  "parent@gtech.com": "parent",
+};
+
+export function getDemoAccountRole(email: string): AppRole | null {
+  return DEMO_ACCOUNT_ROLES[email.trim().toLowerCase()] ?? null;
+}
+
 export type Profile = {
   id: string;
   email: string;
@@ -94,10 +104,40 @@ export async function signInWhitelisted(params: {
   if (error) throw new Error(error.message);
   if (!data.user) throw new Error("Sign-in failed. Please try again.");
 
+  const demoRole = getDemoAccountRole(email);
+  const fullName =
+    (data.user.user_metadata?.["full_name"] as string | undefined) ?? email.split("@")[0];
+
+  if (demoRole) {
+    let existingProfile: Profile | null = null;
+    try {
+      existingProfile = await fetchProfile();
+    } catch (profileError) {
+      console.warn(
+        `[Auth] Could not load the profile for authenticated demo account ${email}; using its configured demo role.`,
+        profileError,
+      );
+    }
+    if (!existingProfile) {
+      console.warn(
+        `[Auth] No profile was found for authenticated demo account ${email}; using its configured demo role.`,
+      );
+    }
+
+    return {
+      id: data.user.id,
+      email: existingProfile?.email ?? email,
+      full_name: existingProfile?.full_name || fullName,
+      school_name: existingProfile?.school_name || params.schoolName,
+      role: demoRole,
+      student_id: existingProfile?.student_id ?? null,
+    };
+  }
+
   const profile = await ensureProfile({
     userId: data.user.id,
     email,
-    fullName: (data.user.user_metadata?.["full_name"] as string | undefined) ?? email.split("@")[0],
+    fullName,
     schoolName: params.schoolName,
   });
   if (!profile) throw new Error(WHITELIST_MESSAGE);

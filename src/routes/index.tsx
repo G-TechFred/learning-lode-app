@@ -52,7 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, requestPasswordReset, type Profile } from "@/lib/gtech-auth";
+import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, requestPasswordReset, getDemoAccountRole, type Profile } from "@/lib/gtech-auth";
 import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
@@ -73,6 +73,12 @@ export const Route = createFileRoute("/")({
 });
 
 type Role = "teacher" | "student" | "parent";
+
+const DEMO_CREDENTIALS: Record<Role, { email: string; password: string }> = {
+  teacher: { email: "teacher@gtech.com", password: "Demo1password@" },
+  student: { email: "student@gtech.com", password: "Demo2password@" },
+  parent: { email: "parent@gtech.com", password: "Demo3password@" },
+};
 
 const SUBJECTS = ["Math", "Science", "English", "History"] as const;
 type Subject = typeof SUBJECTS[number];
@@ -435,19 +441,20 @@ function App() {
         onSignUpClick={() => setIsSignUp(!isSignUp)}
         onForgotPassword={() => setAuthScreen("forgot-password")}
         onSuccess={(firstName, signedInProfile) => {
+          const signedInRole = signedInProfile?.role ?? pendingRole;
           setUserName(firstName);
           setProfile(signedInProfile);
           if (signedInProfile?.student_id != null) setSelectedStudentId(signedInProfile.student_id);
-          setRole(pendingRole);
+          setRole(signedInRole);
           setPendingRole(null);
           setIsSignUp(false);
           notify({
-            title: `Signed in as ${pendingRole}`,
+            title: `Signed in as ${signedInRole}`,
             body: `Welcome back, ${firstName}. ${term}, ${academicYear} is the active session.`,
             kind: "success",
             toast: false,
           });
-          if (pendingRole === "teacher") {
+          if (signedInRole === "teacher") {
             notify({
               title: "Record this term's assessments",
               body: "Use Enter Performance to add class scores, exam scores, attendance and remarks.",
@@ -551,7 +558,7 @@ function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" |
   return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
 }
 
-function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword, onAwaitingConfirmation }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void; onAwaitingConfirmation: (email: string) => void }) {
+function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [fullName, setFullName] = useState("");
@@ -569,11 +576,27 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
     ? fullName.trim().length > 1 && school.trim().length > 1 && emailValid && strength.valid && passwordsMatch
     : school.trim().length > 1 && emailValid && strength.valid;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit || submitting) {
-      if (!canSubmit) toast.error("Please complete all fields correctly.");
+  const handleSubmit = async (e?: React.FormEvent, demoRole?: Role) => {
+    e?.preventDefault();
+    const demoCredentials = demoRole ? DEMO_CREDENTIALS[demoRole] : null;
+    const credentials = {
+      email: demoCredentials?.email ?? email,
+      password: demoCredentials?.password ?? password,
+      schoolName: demoCredentials ? "G-Tech Automation" : school,
+    };
+    const isValid = demoRole
+      ? credentials.schoolName.trim().length > 1 &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentials.email) &&
+        passwordStrength(credentials.password).valid
+      : canSubmit;
+    if (!isValid || submitting) {
+      if (!isValid) toast.error("Please complete all fields correctly.");
       return;
+    }
+    if (demoCredentials) {
+      setSchool(credentials.schoolName);
+      setEmail(credentials.email);
+      setPassword(credentials.password);
     }
     setSubmitting(true);
     try {
@@ -599,10 +622,11 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
         return;
       }
 
-      const profile = await signInWhitelisted({ email, password, schoolName: school });
-      if (profile.role !== role) {
+      const profile = await signInWhitelisted(credentials);
+      const expectedRole = demoRole ?? getDemoAccountRole(credentials.email) ?? role;
+      if (profile.role !== expectedRole) {
         await authSignOut();
-        toast.error(`This email is authorized as a ${profile.role}, not a ${role}.`);
+        toast.error(`This email is authorized as a ${profile.role}, not a ${expectedRole}.`);
         return;
       }
       const firstName = (profile.full_name || email).split(" ")[0];
@@ -728,9 +752,6 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
                 <UserPlus className="mr-2 h-4 w-4" /> {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign in"}
               </Button>
             </form>
-            <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Access is invite-only: only emails approved by the school can sign in.
-            </p>
             <div className="mt-4 text-center text-sm text-slate-600">
               {isSignUp ? "Already have an account?" : "Don't have an account?"} {" "}
               <button
@@ -740,6 +761,25 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
                 {isSignUp ? "Sign in" : "Sign up"}
               </button>
             </div>
+            {!isSignUp && (
+              <div className="mt-6 border-t border-slate-200 pt-5">
+                <h3 className="mb-3 text-center text-sm font-semibold text-slate-700">Demo Quick Access</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["teacher", "student", "parent"] as const).map((demoRole) => (
+                    <Button
+                      key={demoRole}
+                      type="button"
+                      variant="outline"
+                      disabled={submitting}
+                      onClick={() => void handleSubmit(undefined, demoRole)}
+                      className="px-2 text-xs"
+                    >
+                      Demo {ROLE_THEME[demoRole].name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
