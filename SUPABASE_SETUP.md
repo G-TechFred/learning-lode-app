@@ -1,11 +1,11 @@
-# Supabase Setup Guide for G-TECH Automation
+# Supabase Setup Guide for GODDY MONTESSORI SCHOOL
 
 ## Step 1: Create Supabase Account and Project
 
 1. Go to [https://supabase.com](https://supabase.com) and sign up for a free account
 2. Click "New Project" to create a new project
 3. Fill in the project details:
-   - **Name:** G-TECH Automation (or your preferred name)
+   - **Name:** GODDY MONTESSORI SCHOOL (or your preferred name)
    - **Database Password:** Create a strong password (save this!)
    - **Region:** Choose the region closest to you
 4. Wait for the project to be created (2-3 minutes)

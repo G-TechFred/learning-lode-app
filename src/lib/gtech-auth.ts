@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/external-supabase/client";
 
 export type AppRole = "teacher" | "parent" | "student";
 
@@ -101,7 +101,20 @@ export async function signInWhitelisted(params: {
     email,
     password: params.password,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("database error")) {
+      throw new Error(
+        "The database isn't set up yet, so no account could be created. Run supabase-FIX-LOGIN-run-this-first.sql then supabase-schema-for-your-project.sql in your Supabase SQL Editor.",
+      );
+    }
+    if (msg.includes("invalid login credentials")) {
+      throw new Error(
+        "No account matches this email and password. If you never completed sign-up, create the account first (or use Forgot password).",
+      );
+    }
+    throw new Error(error.message);
+  }
   if (!data.user) throw new Error("Sign-in failed. Please try again.");
 
   const demoRole = getDemoAccountRole(email);
@@ -182,14 +195,34 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-/** Send a password-reset link to a whitelisted email. */
+const NOT_REGISTERED_MESSAGE =
+  "No account exists for this email. Please enter the exact email address you used to register the app.";
+
+/** True when an account already exists for this email. */
+export async function emailIsRegistered(email: string): Promise<boolean> {
+  const clean = email.trim().toLowerCase();
+  const { data, error } = await supabase.rpc("email_is_registered", { p_email: clean });
+  if (error) {
+    throw new Error(
+      "Unable to verify this email right now. Please try again later or contact the school administrator.",
+    );
+  }
+  return data === true;
+}
+
+/** Send a password-reset link — only to an email that already has an account. */
 export async function requestPasswordReset(email: string): Promise<void> {
   const clean = email.trim().toLowerCase();
+
+  const registered = await emailIsRegistered(clean);
+  if (!registered) throw new Error(NOT_REGISTERED_MESSAGE);
+
   const { error } = await supabase.auth.resetPasswordForEmail(clean, {
     redirectTo: `${window.location.origin}/reset-password`,
   });
   if (error) throw new Error(error.message);
 }
+
 
 /** Set a new password for the currently recovering/signed-in user. */
 export async function updatePassword(newPassword: string): Promise<void> {

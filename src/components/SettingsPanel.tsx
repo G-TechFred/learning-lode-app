@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/external-supabase/client";
 import { notify } from "@/lib/notifications";
 import { toast } from "sonner";
 
@@ -307,7 +307,7 @@ export function SettingsPanel({
 
               <TabsContent value="about" className="mt-0 space-y-4">
                 <div className="rounded-xl border border-slate-200 p-4">
-                  <p className="text-sm font-semibold text-slate-900">G-TECH AUTOMATION</p>
+                  <p className="text-sm font-semibold text-slate-900">GODDY MONTESSORI SCHOOL</p>
                   <p className="text-xs text-slate-500">Student Performance Tracker · Version 1.0</p>
                   <p className="mt-3 text-sm text-slate-600">
                     A performance tracking platform built for Ghanaian Primary and JHS schools, following the Ghana Education Service structure: Basic 1–6 and JHS 1–3, three terms per academic year, and dual class-score / exam-score assessment with terminal report cards.

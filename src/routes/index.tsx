@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { signUpWhitelisted, signInWhitelisted, signOut as authSignOut, requestPasswordReset, getDemoAccountRole, type Profile } from "@/lib/gtech-auth";
+import { loadTeacherWorkspace, saveTeacherWorkspace, loadPublished } from "@/lib/teacher-records";
 import { savePerformance, totalScore } from "@/lib/performance";
 import { useRealtimePerformance } from "@/hooks/useRealtimePerformance";
 import { notify, notifyOnce, useNotifications } from "@/lib/notifications";
@@ -63,9 +64,9 @@ import { SettingsPanel, type SettingsTab } from "@/components/SettingsPanel";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "G-TECH AUTOMATION — Student Performance Tracker" },
+      { title: "GODDY MONTESSORI SCHOOL — Student Performance Tracker" },
       { name: "description", content: "Modern dashboard for teachers, students and parents to track grades, attendance and progress in real time." },
-      { property: "og:title", content: "G-TECH AUTOMATION — Student Performance Tracker" },
+      { property: "og:title", content: "GODDY MONTESSORI SCHOOL — Student Performance Tracker" },
       { property: "og:description", content: "Real-time analytics for teachers, students and parents." },
     ],
   }),
@@ -112,20 +113,15 @@ type Student = {
 const classLabel = (s: Pick<Student, "level" | "stream">) => `${s.level} ${s.stream}`;
 
 const INITIAL_STUDENTS: Student[] = [
-  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 94, Science: 91, English: 88, History: 90 }, attendance: 97, participation: { Math: 9, Science: 9, English: 8, History: 9 }, remarks: { Math: "Outstanding problem-solver.", Science: "Engaged in every lab.", English: "Strong essays.", History: "Insightful analysis." } },
-  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 76, Science: 82, English: 79, History: 74 }, attendance: 91, participation: { Math: 7, Science: 8, English: 7, History: 6 }, remarks: { Math: "Improving steadily.", Science: "Solid effort.", English: "Watch grammar.", History: "Needs deeper reading." } },
-  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 68, Science: 72, English: 81, History: 70 }, attendance: 83, participation: { Math: 5, Science: 6, English: 8, History: 6 }, remarks: { Math: "Schedule tutoring.", Science: "Catch up on labs.", English: "Creative writer.", History: "Missing homework." } },
-  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 88, Science: 85, English: 92, History: 87 }, attendance: 95, participation: { Math: 8, Science: 8, English: 9, History: 8 }, remarks: { Math: "Sharp logic.", Science: "Great curiosity.", English: "Eloquent voice.", History: "Excellent essays." } },
-  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 58, Science: 64, English: 70, History: 62 }, attendance: 78, participation: { Math: 4, Science: 5, English: 6, History: 5 }, remarks: { Math: "Urgent support needed.", Science: "Struggling with concepts.", English: "Reading practice.", History: "Falling behind." } },
-  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 84, Science: 80, English: 86, History: 83 }, attendance: 93, participation: { Math: 7, Science: 7, English: 8, History: 7 }, remarks: { Math: "Consistent.", Science: "Reliable.", English: "Strong reader.", History: "Good notes." } },
+  { id: 1, name: "Amara Okafor", level: "JHS 2", stream: "Unique", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 2, name: "Kwame Mensah", level: "JHS 2", stream: "Unique", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 3, name: "Akosua Boateng", level: "Basic 5", stream: "B", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 4, name: "Kojo Asante", level: "Basic 4", stream: "A", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 5, name: "Yaa Owusu", level: "JHS 1", stream: "Gold", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
+  { id: 6, name: "Nana Adjei", level: "JHS 3", stream: "A", grades: { Math: 0, Science: 0, English: 0, History: 0 }, attendance: 0, participation: { Math: 0, Science: 0, English: 0, History: 0 }, remarks: { Math: "", Science: "", English: "", History: "" } },
 ];
 
-const TERM_TREND = [
-  { term: "Term 1", avg: 78 },
-  { term: "Term 2", avg: 81 },
-  { term: "Midterm", avg: 83 },
-  { term: "Finals", avg: 86 },
-];
+const TERM_TREND: { term: string; avg: number }[] = [];
 
 function overall(s: Student) {
   const v = Object.values(s.grades);
@@ -344,51 +340,46 @@ function App() {
   const [academicYear, setAcademicYear] = useState<AcademicYear>("2025/2026");
   const [term, setTerm] = useState<Term>("Term 1");
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
   const syncedRef = useRef<string>("");
   const { unread } = useNotifications();
 
-  // Teachers: persist recorded grades/attendance/participation to the database
-  // so student and parent portals receive them live.
+  // Load the right records for whoever signs in: a teacher's own workspace,
+  // or the latest teacher-published results for students and parents.
+  const workspaceRef = useRef<{ email: string; students: Student[] } | null>(null);
   useEffect(() => {
-    if (profile?.role !== "teacher") return;
-    const snapshot = JSON.stringify({ students, term, academicYear });
-    if (syncedRef.current === "") {
-      syncedRef.current = snapshot;
+    if (!role || !profile) {
+      workspaceRef.current = null;
+      setStudents(INITIAL_STUDENTS);
       return;
     }
-    if (syncedRef.current === snapshot) return;
-    syncedRef.current = snapshot;
-
-    const rows = students.flatMap((s) =>
-      SUBJECTS.map((subject) => ({
-        student_id: s.id,
-        subject,
-        class_score: s.grades[subject],
-        exam_score: s.grades[subject],
-        attendance: s.attendance,
-        participation: s.participation[subject],
-        remark: s.remarks[subject],
-        term,
-        academic_year: academicYear,
-      })),
-    );
-    savePerformance(rows)
-      .then(() => {
-        notify({
-          title: "Results published",
-          body: `${term}, ${academicYear} records were saved and shared with students and parents.`,
-          kind: "success",
-          toast: false,
-        });
+    let active = true;
+    const email = profile.email;
+    const isTeacher = role === "teacher";
+    workspaceRef.current = null;
+    setStudents(INITIAL_STUDENTS);
+    (isTeacher ? loadTeacherWorkspace(email, INITIAL_STUDENTS) : loadPublished(INITIAL_STUDENTS))
+      .then((list) => {
+        if (!active) return;
+        if (isTeacher) workspaceRef.current = { email, students: list };
+        setStudents(list);
       })
       .catch((e: unknown) => {
-        notify({
-          title: "Could not save performance records",
-          body: e instanceof Error ? e.message : "Please check your connection and try again.",
-          kind: "error",
-        });
+        notify({ title: "Could not load records", body: e instanceof Error ? e.message : "Check your connection.", kind: "error" });
       });
-  }, [students, term, academicYear, profile]);
+    return () => { active = false; };
+  }, [role, profile?.email]);
+
+  // Teachers: save every change to their own workspace and publish it.
+  useEffect(() => {
+    const ws = workspaceRef.current;
+    if (role !== "teacher" || !ws || ws.students === students) return;
+    const previous = ws.students;
+    ws.students = students;
+    saveTeacherWorkspace(ws.email, students, previous).catch((e: unknown) => {
+      notify({ title: "Could not save records online", body: e instanceof Error ? e.message : "Check your connection and try again.", kind: "error" });
+    });
+  }, [students, role]);
 
   // Advisories the user should take note of, raised once per situation.
   useEffect(() => {
@@ -440,12 +431,22 @@ function App() {
         onBack={() => setPendingRole(null)}
         onSignUpClick={() => setIsSignUp(!isSignUp)}
         onForgotPassword={() => setAuthScreen("forgot-password")}
+        onAwaitingConfirmation={(email) => {
+          setIsSignUp(false);
+          notify({
+            title: "Confirm your email",
+            body: `We sent a confirmation link to ${email}. Once confirmed, you'll be taken straight to your ${pendingRole} portal.`,
+            kind: "info",
+          });
+          toast.success("Account created. Check your email to confirm, then sign in.");
+        }}
         onSuccess={(firstName, signedInProfile) => {
           const signedInRole = signedInProfile?.role ?? pendingRole;
           setUserName(firstName);
           setProfile(signedInProfile);
           if (signedInProfile?.student_id != null) setSelectedStudentId(signedInProfile.student_id);
           setRole(signedInRole);
+          setShowWelcome(true);
           setPendingRole(null);
           setIsSignUp(false);
           notify({
@@ -495,7 +496,15 @@ function App() {
         unread={unread}
       />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {role === "teacher" ? (
+        {role === "teacher" && showWelcome ? (
+          <TeacherWelcome
+            name={profile?.full_name || userName}
+            email={profile?.email ?? ""}
+            school={profile?.school_name ?? ""}
+            students={students}
+            onContinue={() => setShowWelcome(false)}
+          />
+        ) : role === "teacher" ? (
           <TeacherDashboard userName={userName} students={students} setStudents={setStudents} academicYear={academicYear} setAcademicYear={setAcademicYear} term={term} setTerm={setTerm} />
         ) : (
           <StudentParentDashboard
@@ -536,6 +545,34 @@ function App() {
 }
 
 
+function TeacherWelcome({ name, email, school, students, onContinue }: { name: string; email: string; school: string; students: Student[]; onContinue: () => void }) {
+  const entered = students.filter((s) => Object.values(s.grades).some((g) => g > 0) || s.attendance > 0).length;
+  const first = name.split(" ")[0] || "Teacher";
+  return (
+    <div className="mx-auto max-w-2xl py-10">
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-br from-orange-500 to-amber-500 p-8 text-white">
+          <p className="text-sm uppercase tracking-widest text-white/80">Your personal workspace</p>
+          <h1 className="mt-2 text-3xl font-bold">Welcome, {first}</h1>
+          <p className="mt-2 text-white/90">{school || "GODDY MONTESSORI SCHOOL"} · {email}</p>
+        </div>
+        <CardContent className="space-y-4 p-6">
+          <p className="text-slate-600">
+            This dashboard belongs only to you. Marks, attendance and remarks you enter here are kept separately from other
+            teachers and are saved even after you log out. Students and parents see your latest entries.
+          </p>
+          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+            {entered === 0
+              ? "You haven't entered any assessments yet. Start by opening Enter Performance."
+              : `You have saved assessments for ${entered} student${entered > 1 ? "s" : ""}.`}
+          </div>
+          <Button className="w-full" onClick={onContinue}>Open my dashboard</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" | "Better" | ""; score: number; color: string; valid: boolean; issues: string[] } {
   const issues: string[] = [];
   if (pw.length === 0) return { label: "", score: 0, color: "bg-slate-200", valid: false, issues };
@@ -558,7 +595,7 @@ function passwordStrength(pw: string): { label: "Weak" | "Strong" | "Stronger" |
   return { label: labels[score], score, color: colors[score], valid: issues.length === 0, issues };
 }
 
-function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void }) {
+function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotPassword, onAwaitingConfirmation }: { role: Role; isSignUp: boolean; onBack: () => void; onSuccess: (firstName: string, profile: Profile | null) => void; onSignUpClick: () => void; onForgotPassword: () => void; onAwaitingConfirmation: (email: string) => void }) {
   const theme = ROLE_THEME[role];
   const Icon = theme.icon;
   const [fullName, setFullName] = useState("");
@@ -608,7 +645,7 @@ function LoginPage({ role, isSignUp, onBack, onSuccess, onSignUpClick, onForgotP
           schoolName: school,
         });
         if (needsEmailConfirmation) {
-          toast.success("Account created. Check your email to confirm, then sign in.");
+          onAwaitingConfirmation(email);
           return;
         }
         if (profile && profile.role !== role) {
@@ -814,7 +851,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
           <GraduationCap className="h-10 w-10 text-white" />
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
-          G-TECH AUTOMATION
+          GODDY MONTESSORI SCHOOL
         </h1>
         <p className="mt-3 text-sm font-medium uppercase tracking-[0.2em] text-indigo-200">
           Student Performance Tracker
@@ -846,11 +883,11 @@ function Landing({ onPick }: { onPick: (r: Role) => void }) {
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#F68B1E]/30 bg-[#F68B1E]/10 px-4 py-1.5 text-xs font-medium backdrop-blur animate-magical-rise">
-            <Sparkles className="h-3.5 w-3.5 text-[#F68B1E]" />
             Student Performance Tracker
           </div>
+
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl animate-magical-rise" style={{ animationDelay: "120ms" }}>
-            <span className="text-magical">G-TECH AUTOMATION</span>
+            <span className="text-magical">GODDY MONTESSORI SCHOOL</span>
           </h1>
           <p className="mt-4 text-base text-amber-100/80 sm:text-lg animate-magical-rise" style={{ animationDelay: "260ms" }}>
             Real-time grades, attendance, and teacher-entered insights for everyone in the classroom.
@@ -908,7 +945,7 @@ function NavBar({
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight">G-TECH AUTOMATION</p>
+            <p className="truncate text-sm font-bold tracking-tight">GODDY MONTESSORI SCHOOL</p>
             <p className="hidden text-xs text-slate-500 sm:block">Performance tracker</p>
           </div>
         </div>
@@ -1782,7 +1819,7 @@ function StudentParentDashboard({
         </CardHeader>
         <CardContent className="h-64 pl-0">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={TERM_TREND.map((t) => ({ ...t, avg: t.avg + 5 }))}>
+            <LineChart data={TERM_TREND}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="term" stroke="#64748b" fontSize={12} />
               <YAxis domain={[60, 100]} stroke="#64748b" fontSize={12} />

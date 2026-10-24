@@ -10,108 +10,30 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
-      authorized_users: {
+      teacher_records: {
         Row: {
-          created_at: string
-          email: string
+          data: Json
           id: string
-          role: Database["public"]["Enums"]["app_role"]
-          student_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          student_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          student_id?: number | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          full_name: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          school_name: string
-          student_id: number | null
+          student_id: number
+          teacher_email: string
           updated_at: string
         }
         Insert: {
-          created_at?: string
-          email: string
-          full_name?: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          school_name?: string
-          student_id?: number | null
+          data: Json
+          id?: string
+          student_id: number
+          teacher_email: string
           updated_at?: string
         }
         Update: {
-          created_at?: string
-          email?: string
-          full_name?: string
+          data?: Json
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          school_name?: string
-          student_id?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      student_performance: {
-        Row: {
-          academic_year: string
-          attendance: number
-          class_score: number
-          exam_score: number
-          id: string
-          participation: number
-          remark: string
-          student_id: number
-          subject: string
-          teacher_id: string | null
-          term: string
-          updated_at: string
-        }
-        Insert: {
-          academic_year: string
-          attendance?: number
-          class_score?: number
-          exam_score?: number
-          id?: string
-          participation?: number
-          remark?: string
-          student_id: number
-          subject: string
-          teacher_id?: string | null
-          term: string
-          updated_at?: string
-        }
-        Update: {
-          academic_year?: string
-          attendance?: number
-          class_score?: number
-          exam_score?: number
-          id?: string
-          participation?: number
-          remark?: string
           student_id?: number
-          subject?: string
-          teacher_id?: string | null
-          term?: string
+          teacher_email?: string
           updated_at?: string
         }
         Relationships: []
@@ -121,15 +43,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_app_role: {
-        Args: never
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      current_student_id: { Args: never; Returns: number }
-      is_email_authorized: { Args: { _email: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "teacher" | "parent" | "student"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -145,12 +62,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -174,11 +91,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -199,11 +116,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -224,11 +141,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -241,11 +158,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -256,8 +173,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["teacher", "parent", "student"],
-    },
+    Enums: {},
   },
 } as const
