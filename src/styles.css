@@ -170,3 +170,40 @@
 #lovable-badge {
   display: none !important;
 }
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .demo-progress-report,
+  .demo-progress-report * {
+    visibility: visible !important;
+  }
+
+  .demo-progress-report {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    color: #111827 !important;
+    background: white !important;
+  }
+
+  .demo-progress-report .no-print {
+    display: none !important;
+  }
+
+  .demo-progress-report .shadow-sm,
+  .demo-progress-report .shadow-lg {
+    box-shadow: none !important;
+  }
+}

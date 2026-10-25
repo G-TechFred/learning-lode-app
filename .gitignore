@@ -37,3 +37,7 @@ dist-ssr
 # Build outputs
 dist/
 .output/
+# Firebase Admin SDK credentials
+serviceAccountKey.json
+firebase-admin-key.json
+*-firebase-adminsdk-*.json

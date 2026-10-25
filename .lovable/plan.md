@@ -49,7 +49,7 @@ Deliverable: term + level/stream selection works end-to-end, and every existing 
 ---
 
 ## Technical notes
-- All state stays in the existing single-page component (no backend changes) so previews keep working. When you're ready to persist, we'll port `students`, `terms`, and `reports` into Lovable Cloud tables.
+- State stays in the existing single-page component and browser storage for local previews. No authentication or database service is connected; do not enter real student data. Production use requires choosing and configuring a backend.
 - Report positions are computed from filtered stream + term data, so they update as scores change.
 
 ---

@@ -22,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/external-supabase/client";
 import { notify } from "@/lib/notifications";
 import { toast } from "sonner";
 
@@ -61,14 +60,6 @@ function savePrefs(p: NotificationPrefs) {
   }
 }
 
-function passwordIssues(pw: string) {
-  const issues: string[] = [];
-  if (pw.length < 10) issues.push("At least 10 characters");
-  if (pw.length > 15) issues.push("No more than 15 characters");
-  if (!/[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|`~]/.test(pw)) issues.push("Include a special character");
-  return issues;
-}
-
 type SettingsProfile = {
   fullName: string;
   email: string;
@@ -90,7 +81,7 @@ export function SettingsPanel({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   profile: SettingsProfile;
-  onProfileSaved?: (fullName: string) => void;
+  onProfileSaved?: (fullName: string, school: string) => void;
   tab?: SettingsTab;
   onTabChange?: (t: SettingsTab) => void;
 }) {
@@ -99,10 +90,6 @@ export function SettingsPanel({
   const [savingProfile, setSavingProfile] = useState(false);
 
 
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
-  const [savingPw, setSavingPw] = useState(false);
-
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
 
   useEffect(() => {
@@ -110,8 +97,6 @@ export function SettingsPanel({
       setFullName(profile.fullName);
       setSchool(profile.school);
       setPrefs(loadPrefs());
-      setPw("");
-      setPw2("");
     }
   }, [open, profile.fullName, profile.school]);
 
@@ -133,51 +118,13 @@ export function SettingsPanel({
       return;
     }
     setSavingProfile(true);
-    try {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ full_name: fullName.trim(), school_name: school.trim() })
-          .eq("id", data.user.id);
-        if (error) throw new Error(error.message);
-      }
-      onProfileSaved?.(fullName.trim());
-      notify({ title: "Profile updated", body: "Your name and school details were saved.", kind: "success" });
-    } catch (e) {
-      notify({ title: "Could not save profile", body: e instanceof Error ? e.message : "Please try again.", kind: "error" });
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const changePassword = async () => {
-    const issues = passwordIssues(pw);
-    if (issues.length) {
-      toast.error(issues[0]);
-      return;
-    }
-    if (pw !== pw2) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    setSavingPw(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: pw });
-      if (error) throw new Error(error.message);
-      setPw("");
-      setPw2("");
-      notify({
-        title: "Password changed",
-        body: "Your password was updated successfully.",
-        kind: "success",
-        hint: "Use your new password the next time you sign in.",
-      });
-    } catch (e) {
-      notify({ title: "Password change failed", body: e instanceof Error ? e.message : "Please try again.", kind: "error" });
-    } finally {
-      setSavingPw(false);
-    }
+    onProfileSaved?.(fullName.trim(), school.trim());
+    notify({
+      title: "Demo profile updated",
+      body: "This change only affects the current local demo session.",
+      kind: "info",
+    });
+    setSavingProfile(false);
   };
 
   return (
@@ -185,7 +132,7 @@ export function SettingsPanel({
       <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="border-b border-slate-200 px-6 py-4 text-left">
           <DialogTitle className="text-slate-900">Settings</DialogTitle>
-          <DialogDescription>Manage your profile, privacy, security and notification preferences.</DialogDescription>
+          <DialogDescription>Manage this browser&apos;s local demo profile and preferences.</DialogDescription>
         </DialogHeader>
 
         <Tabs value={tab ?? "profile"} onValueChange={(v) => onTabChange?.(v as SettingsTab)} className="flex flex-col">
@@ -235,38 +182,15 @@ export function SettingsPanel({
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Your email and role come from the school's authorized users list and can only be changed by an administrator.
+                  This is a temporary local demo profile. Changes are not sent to a school account or shared with other users.
                 </p>
                 <Button onClick={saveProfile} disabled={savingProfile}>{savingProfile ? "Saving…" : "Save changes"}</Button>
               </TabsContent>
 
               <TabsContent value="security" className="mt-0 space-y-5">
-                <div className="rounded-xl border border-slate-200 p-4">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Lock className="h-4 w-4" /> Change password</p>
-                  <p className="mt-1 text-xs text-slate-500">10–15 characters and at least one special character.</p>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="set-pw">New password</Label>
-                      <Input id="set-pw" type="password" maxLength={15} value={pw} onChange={(e) => setPw(e.target.value.slice(0, 15))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="set-pw2">Confirm password</Label>
-                      <Input id="set-pw2" type="password" maxLength={15} value={pw2} onChange={(e) => setPw2(e.target.value.slice(0, 15))} />
-                    </div>
-                  </div>
-                  {pw.length > 0 && passwordIssues(pw).length > 0 && (
-                    <ul className="mt-2 space-y-0.5 text-xs text-rose-600">
-                      {passwordIssues(pw).map((i) => <li key={i}>• {i}</li>)}
-                    </ul>
-                  )}
-                  <Button className="mt-4" onClick={changePassword} disabled={savingPw}>{savingPw ? "Updating…" : "Update password"}</Button>
-                </div>
-
-                <div className="space-y-3 rounded-xl border border-slate-200 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">Account protection</p>
-                  <p>• Sessions are secured with encrypted tokens and expire automatically.</p>
-                  <p>• Only emails on the school's authorized list can register or sign in.</p>
-                  <p>• Your role and any linked student are assigned by the school, never self-selected.</p>
+                <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4" /> Authentication is unavailable</p>
+                  <p>This local demo does not have accounts, password storage, password changes, or secure sessions. Do not enter a real password.</p>
                 </div>
               </TabsContent>
 
@@ -274,19 +198,19 @@ export function SettingsPanel({
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4" /> How your data is protected</p>
                   <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                    <li className="flex gap-2"><Database className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Grades, attendance and remarks are stored securely and are only readable by the student, their linked parent, and their teachers.</li>
-                    <li className="flex gap-2"><Eye className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Parents can view only the child linked to their account. Students see only their own records.</li>
-                    <li className="flex gap-2"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Passwords are hashed — nobody at the school, including administrators, can read them.</li>
-                    <li className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Records are never sold, shared with advertisers, or used outside the school.</li>
+                    <li className="flex gap-2"><Database className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Demo grades and workspace edits are stored in this browser&apos;s local storage and are not uploaded to a school database.</li>
+                    <li className="flex gap-2"><Eye className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Demo roles are selectable and do not restrict access. This is not suitable for private student records.</li>
+                    <li className="flex gap-2"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> The application has no authentication or account password handling.</li>
+                    <li className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /> Local demo data can be viewed by anyone using this browser profile.</li>
                   </ul>
                 </div>
                 <Separator />
                 <div className="space-y-2 text-sm text-slate-600">
                   <p className="font-semibold text-slate-900">Your rights</p>
-                  <p>You may request a copy of the data held about you, ask for corrections to inaccurate records, or request account removal when a student leaves the school. Contact the school administrator to start any of these requests.</p>
+                  <p>Demo data is stored in this browser and can be cleared using your browser&apos;s site-data controls. There is no online account or school data service connected.</p>
                 </div>
                 <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                  Note: report cards and term results are official school records and are retained for the school's statutory retention period even after an account is closed.
+                  Do not enter real student information. Local demo records are not official school records and are not protected by account access controls.
                 </div>
               </TabsContent>
 
@@ -301,7 +225,7 @@ export function SettingsPanel({
                   </div>
                 ))}
                 <p className="pt-2 text-xs text-slate-500">
-                  Notifications stay in your inbox until you remove them — the app never clears them for you.
+                  Preferences are stored locally. Email notifications are not sent in this demo.
                 </p>
               </TabsContent>
 
@@ -316,17 +240,17 @@ export function SettingsPanel({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 p-3 text-sm">
                     <p className="font-medium text-slate-900">What teachers can do</p>
-                    <p className="mt-1 text-xs text-slate-500">Record grades, attendance, participation and remarks per subject, then publish results instantly to students and parents.</p>
+                    <p className="mt-1 text-xs text-slate-500">Preview grade, attendance, participation and remark entry. Data remains in this browser.</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-3 text-sm">
                     <p className="font-medium text-slate-900">What families see</p>
-                    <p className="mt-1 text-xs text-slate-500">Live subject performance, attendance summaries, teacher remarks and terminal report cards — updated the moment a teacher saves.</p>
+                    <p className="mt-1 text-xs text-slate-500">Preview subject performance, attendance summaries, teacher remarks and terminal report cards from local browser data.</p>
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 p-4 text-sm text-slate-600">
                   <p className="flex items-center gap-2 font-semibold text-slate-900"><LifeBuoy className="h-4 w-4" /> Help &amp; support</p>
-                  <p className="mt-2">Trouble signing in or missing results? Contact your school administrator to confirm your email is on the authorized users list and that your role is correctly assigned.</p>
-                  <p className="mt-1">For password problems, use “Forgot password” on the sign-in screen to receive a reset link by email.</p>
+                  <p className="mt-2">This is a local demonstration only. Secure sign-in, account registration, and shared school records require a real backend and are unavailable.</p>
+                  <p className="mt-1">Changes are stored only in this browser and may be cleared by the browser.</p>
                 </div>
               </TabsContent>
             </div>
@@ -342,7 +266,7 @@ const PREF_LABELS: Record<keyof NotificationPrefs, string> = {
   attendanceAlerts: "Attendance alerts",
   atRiskAlerts: "At-risk student alerts",
   termReminders: "Term & report reminders",
-  emailDigest: "Weekly email digest",
+  emailDigest: "Email digest (not sent in demo)",
 };
 
 const PREF_HINTS: Record<keyof NotificationPrefs, string> = {
@@ -350,5 +274,5 @@ const PREF_HINTS: Record<keyof NotificationPrefs, string> = {
   attendanceAlerts: "Alerts when attendance drops below the school threshold.",
   atRiskAlerts: "Flags students who need academic or attendance support.",
   termReminders: "Reminders about the active term and report card deadlines.",
-  emailDigest: "A weekly summary sent to your email address.",
+  emailDigest: "Email delivery is unavailable in this local demo.",
 };
